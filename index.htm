@@ -1,0 +1,3285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Recomendaciones de Películas - 121 Preguntas</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --accent-color: #ff6b6b;
+            --accent-secondary: #feca57;
+            --text-color: #333;
+            --bg-light: #f8f9fa;
+            --shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+            --shadow-hover: 0 15px 35px rgba(102, 126, 234, 0.25);
+            --border-radius: 15px;
+            --transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="white" opacity="0.1"/><circle cx="80" cy="40" r="1" fill="white" opacity="0.1"/><circle cx="40" cy="80" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .header h1 {
+            position: relative;
+            font-size: 2.8em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            font-weight: 700;
+        }
+
+        .header p {
+            position: relative;
+            font-size: 1.2em;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        .progress-container {
+            height: 8px;
+            background: rgba(255,255,255,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-color), var(--accent-secondary));
+            width: 0%;
+            transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            position: relative;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .question-container {
+            padding: 50px 40px;
+            text-align: center;
+            min-height: 500px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .question-number {
+            font-size: 1.1em;
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 25px;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .question-text {
+            font-size: 2em;
+            color: var(--text-color);
+            margin-bottom: 45px;
+            line-height: 1.4;
+            font-weight: 300;
+            opacity: 0;
+            animation: fadeInUp 0.6s 0.2s ease forwards;
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .option {
+            background: var(--bg-light);
+            border: 3px solid transparent;
+            border-radius: var(--border-radius);
+            padding: 25px 30px;
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: left;
+            font-size: 1.15em;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+        }
+
+        .option:nth-child(1) { animation-delay: 0.4s; }
+        .option:nth-child(2) { animation-delay: 0.5s; }
+        .option:nth-child(3) { animation-delay: 0.6s; }
+
+        .option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            transition: var(--transition);
+        }
+
+        .option:hover {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+            border-color: var(--primary-color);
+        }
+
+        .option:hover::before {
+            left: 100%;
+        }
+
+        .option:active {
+            transform: translateY(-2px);
+        }
+
+        .option .letter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 20px;
+            font-size: 0.9em;
+            transition: var(--transition);
+        }
+
+        .option:hover .letter {
+            background: white;
+            color: var(--primary-color);
+            transform: rotate(360deg);
+        }
+
+        .recommendation {
+            text-align: center;
+            padding: 50px 40px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        }
+
+        .movie-card {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            border-radius: 25px;
+            padding: 50px;
+            margin: 30px 0;
+            box-shadow: var(--shadow-hover);
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transform: scale(0.9);
+            animation: scaleIn 0.8s 0.3s ease forwards;
+        }
+
+        .movie-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            transform: rotate(45deg);
+            pointer-events: none;
+        }
+
+        .movie-title {
+            position: relative;
+            font-size: 2.8em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .movie-description {
+            position: relative;
+            font-size: 1.3em;
+            line-height: 1.7;
+            opacity: 0.95;
+            margin-bottom: 25px;
+        }
+
+        .movie-tags {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 30px 0;
+        }
+
+        .movie-tag {
+            position: relative;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.95em;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .path-summary {
+            margin-top: 40px;
+            opacity: 0;
+            animation: fadeInUp 0.6s 0.6s ease forwards;
+        }
+
+        .path-summary h3 {
+            font-size: 1.4em;
+            color: var(--text-color);
+            margin-bottom: 25px;
+        }
+
+        .path-container {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            text-align: left;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .path-step {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-left: 4px solid var(--primary-color);
+            background: white;
+            border-radius: 0 10px 10px 0;
+            transition: var(--transition);
+        }
+
+        .path-step:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow);
+        }
+
+        .path-question {
+            font-weight: 600;
+            color: var(--text-color);
+            margin-bottom: 8px;
+        }
+
+        .path-answer {
+            color: var(--primary-color);
+            margin-left: 20px;
+            font-style: italic;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-secondary) 100%);
+            color: white;
+            border: none;
+            padding: 18px 35px;
+            border-radius: 30px;
+            font-size: 1.2em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 40px;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .restart-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: var(--transition);
+        }
+
+        .restart-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .restart-btn:hover::before {
+            left: 100%;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 80px 40px;
+            color: var(--primary-color);
+        }
+
+        .loading-spinner {
+            border: 4px solid rgba(102, 126, 234, 0.2);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 30px;
+        }
+
+        .loading-text {
+            font-size: 1.3em;
+            font-weight: 300;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .error {
+            background: linear-gradient(135deg, var(--accent-color), #ff5252);
+            color: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            margin: 30px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .error h3 {
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .error p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                margin: 0;
+                border-radius: 15px;
+            }
+            
+            .header {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 2.2em;
+            }
+            
+            .question-container {
+                padding: 30px 20px;
+                min-height: 400px;
+            }
+            
+            .question-text {
+                font-size: 1.6em;
+                margin-bottom: 35px;
+            }
+            
+            .movie-title {
+                font-size: 2.2em;
+            }
+            
+            .movie-card {
+                padding: 30px 25px;
+                margin: 20px 0;
+            }
+            
+            .options {
+                gap: 15px;
+            }
+            
+            .option {
+                padding: 20px;
+                font-size: 1.05em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+            
+            .question-text {
+                font-size: 1.4em;
+            }
+            
+            .movie-title {
+                font-size: 1.8em;
+            }
+            
+            .movie-card {
+                padding: 25px 20px;
+            }
+            
+            .option {
+                padding: 18px;
+                font-size: 1em;
+            }
+            
+            .option .letter {
+                width: 30px;
+                height: 30px;
+                margin-right: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Recomendador de Películas</h1>
+            <p>Descubre tu película perfecta a través de 4 preguntas personalizadas</p>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div id="app">
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p class="loading-text">Iniciando tu experiencia personalizada...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    class MovieRecommendationSystem {
+        constructor() {
+            this.currentQuestion = null;
+            this.questionPath = [];
+            this.totalQuestions = 4; // El usuario siempre responde exactamente 4 preguntas
+            this.appElement = document.getElementById('app');
+            this.progressElement = document.getElementById('progressFill');
+            
+            this.questions = this.initializeQuestions();
+            this.recommendations = this.initializeRecommendations();
+            
+            this.start();
+        }
+
+        start() {
+            this.loadQuestion(1);
+        }
+
+        loadQuestion(questionId) {
+            const question = this.questions[questionId];
+            if (!question) {
+                this.showError("Pregunta no encontrada");
+                return;
+            }
+
+            this.currentQuestion = question;
+            this.updateProgress();
+            this.renderQuestion();
+        }
+
+        updateProgress() {
+            const progress = (this.questionPath.length / this.totalQuestions) * 100;
+            this.progressElement.style.width = `${progress}%`;
+        }
+
+        renderQuestion() {
+            this.appElement.innerHTML = `
+                <div class="question-container">
+                    <div class="question-number">Pregunta ${this.questionPath.length + 1} de ${this.totalQuestions}</div>
+                    <div class="question-text">${this.currentQuestion.text}</div>
+                    <div class="options">
+                        ${this.currentQuestion.options.map(option => `
+                            <div class="option" onclick="app.selectOption('${option.letter}')">
+                                <span class="letter">${option.letter.toUpperCase()}</span>
+                                ${option.text}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        selectOption(letter) {
+            const selectedOption = this.currentQuestion.options.find(opt => opt.letter === letter);
+            if (!selectedOption) return;
+
+            // Agregar la selección al camino
+            this.questionPath.push({
+                questionId: this.currentQuestion.id,
+                questionText: this.currentQuestion.text,
+                selectedOption: selectedOption
+            });
+
+            // Determinar qué hacer a continuación
+            if (selectedOption.recommendation) {
+                // Llegamos a una recomendación final
+                this.showRecommendation(selectedOption.recommendation);
+            } else if (selectedOption.next) {
+                // Ir a la siguiente pregunta
+                this.loadQuestion(selectedOption.next);
+            } else {
+                this.showError("No se encontró el siguiente paso");
+            }
+        }
+
+        showRecommendation(recommendationType) {
+            const movie = this.recommendations[recommendationType];
+            if (!movie) {
+                this.showError("Recomendación no encontrada");
+                return;
+            }
+
+            // Actualizar progreso al 100%
+            this.progressElement.style.width = '100%';
+
+            this.appElement.innerHTML = `
+                <div class="recommendation">
+                    <h2>🎬 Tu película perfecta es:</h2>
+                    <div class="movie-card">
+                        <div class="movie-title">${movie.title}</div>
+                        <div class="movie-description">${movie.description}</div>
+                        <div class="movie-tags">
+                            <div class="movie-tag">${movie.genre}</div>
+                            <div class="movie-tag">${movie.mood}</div>
+                        </div>
+                    </div>
+                    <div class="path-summary">
+                        <h3>📝 Tu camino emocional:</h3>
+                        <div class="path-container">
+                            ${this.generatePath()}
+                        </div>
+                    </div>
+                    <button class="restart-btn" onclick="app.restart()">
+                        🔄 Buscar otra película
+                    </button>
+                </div>
+            `;
+        }
+
+        generatePath() {
+            return this.questionPath.map((step, index) => {
+                return `
+                    <div class="path-step">
+                        <div class="path-question">${index + 1}. ${step.questionText}</div>
+                        <div class="path-answer">➤ ${step.selectedOption.text}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        restart() {
+            this.currentQuestion = null;
+            this.questionPath = [];
+            this.progressElement.style.width = '0%';
+            this.start();
+        }
+
+        showError(message) {
+            this.appElement.innerHTML = `
+                <div class="error">
+                    <h3>😔 Oops!</h3>
+                    <p>${message}</p>
+                    <button class="restart-btn" onclick="app.restart()" style="margin-top: 20px;">
+                        🔄 Intentar de nuevo
+                    </button>
+                </div>
+            `;
+        }
+
+        initializeQuestions() {
+    return {
+        1: {
+            id: 1,
+            text: "¿Qué te gustaría hacer ahora?",
+            options: [
+                { letter: "a", text: "Algo relajante, como descansar o desconectar.", next: 2 },
+                { letter: "b", text: "Algo emocionante, como divertirme o sentir adrenalina.", next: 3 },
+                { letter: "c", text: "Algo que me haga pensar o reflexionar.", next: 4 }
+            ]
+        },
+        2: {
+            id: 2,
+            text: "¿Cómo te sientes hoy?",
+            context: "relajante",
+            options: [
+                { letter: "a", text: "Tranquilo, con ganas de paz y calma.", next: 5 },
+                { letter: "b", text: "Un poco cansado, necesito algo ligero.", next: 6 },
+                { letter: "c", text: "Nostálgico, quiero recordar buenos momentos.", next: 7 }
+            ]
+        },
+        3: {
+            id: 3,
+            text: "¿Cómo te sientes hoy?",
+            context: "emocionante",
+            options: [
+                { letter: "a", text: "Súper energético, quiero acción total.", next: 8 },
+                { letter: "b", text: "Aventurero, con ganas de explorar algo nuevo.", next: 9 },
+                { letter: "c", text: "Emocionado, pero también un poco sensible.", next: 10 }
+            ]
+        },
+        4: {
+            id: 4,
+            text: "¿Cómo te sientes hoy?",
+            context: "reflexivo",
+            options: [
+                { letter: "a", text: "Reflexivo, quiero algo que me inspire.", next: 11 },
+                { letter: "b", text: "Curioso, con ganas de aprender algo nuevo.", next: 12 },
+                { letter: "c", text: "Introspectivo, quiero conectar conmigo mismo.", next: 13 }
+            ]
+        },
+        5: {
+            id: 5,
+            text: "¿Tienes poco tiempo o quieres ver algo largo?",
+            context: "tranquilo",
+            options: [
+                { letter: "a", text: "Poco tiempo, algo corto y relajante.", next: 14 },
+                { letter: "b", text: "Tengo tiempo, quiero algo largo y envolvente.", next: 15 },
+                { letter: "c", text: "No estoy seguro, algo intermedio.", next: 16 }
+            ]
+        },
+        6: {
+            id: 6,
+            text: "¿Tienes poco tiempo o quieres ver algo largo?",
+            context: "cansado",
+            options: [
+                { letter: "a", text: "Poco tiempo, algo rápido y divertido.", next: 17 },
+                { letter: "b", text: "Tiempo suficiente para algo tranquilo.", next: 18 },
+                { letter: "c", text: "No me importa el tiempo, pero que sea ligero.", next: 19 }
+            ]
+        },
+        7: {
+            id: 7,
+            text: "¿Tienes poco tiempo o quieres ver algo largo?",
+            context: "nostálgico",
+            options: [
+                { letter: "a", text: "Poco tiempo, algo breve que me traiga recuerdos.", next: 20 },
+                { letter: "b", text: "Tiempo para algo más profundo y nostálgico.", next: 21 },
+                { letter: "c", text: "Algo que me transporte, sin importar la duración.", next: 22 }
+            ]
+        },
+        8: {
+            id: 8,
+            text: "¿Qué tipo de acción prefieres?",
+            context: "súper energético",
+            options: [
+                { letter: "a", text: "Explosiones y peleas intensas.", next: 23 },
+                { letter: "b", text: "Aventuras épicas con héroes.", next: 24 },
+                { letter: "c", text: "Suspenso que mantenga el borde.", next: 25 }
+            ]
+        },
+        9: {
+            id: 9,
+            text: "¿Qué tipo de aventura buscas?",
+            context: "aventurero",
+            options: [
+                { letter: "a", text: "Viajar a mundos exóticos.", next: 26 },
+                { letter: "b", text: "Explorar culturas realistas.", next: 27 },
+                { letter: "c", text: "Fantasía con magia o mitología.", next: 28 }
+            ]
+        },
+        10: {
+            id: 10,
+            text: "¿Qué emoción buscas?",
+            context: "emocionado, sensible",
+            options: [
+                { letter: "a", text: "Reír y emocionar.", next: 29 },
+                { letter: "b", text: "Drama con esperanza.", next: 30 },
+                { letter: "c", text: "Sentirte conectado con otros.", next: 31 }
+            ]
+        },
+        11: {
+            id: 11,
+            text: "¿Qué te inspira hoy?",
+            context: "reflexivo",
+            options: [
+                { letter: "a", text: "Superación personal.", next: 32 },
+                { letter: "b", text: "Ideas que cambien perspectivas.", next: 33 },
+                { letter: "c", text: "Conexiones humanas profundas.", next: 34 }
+            ]
+        },
+        12: {
+            id: 12,
+            text: "¿Qué quieres aprender?",
+            context: "curioso",
+            options: [
+                { letter: "a", text: "Ciencia o tecnología.", next: 35 },
+                { letter: "b", text: "Historia o eventos reales.", next: 36 },
+                { letter: "c", text: "Culturas y formas de vida.", next: 37 }
+            ]
+        },
+        13: {
+            id: 13,
+            text: "¿Qué buscas en la introspección?",
+            context: "introspectivo",
+            options: [
+                { letter: "a", text: "Emociones profundas.", next: 38 },
+                { letter: "b", text: "Sentido de la vida.", next: 39 },
+                { letter: "c", text: "Espiritualidad.", next: 40 }
+            ]
+        },
+        14: {
+            id: 14,
+            text: "¿Qué estilo relajante prefieres?",
+            context: "poco tiempo, relajante",
+            options: [
+                { letter: "a", text: "Humor suave.", next: 41 },
+                { letter: "b", text: "Paisajes calmantes.", next: 42 },
+                { letter: "c", text: "Romance sencillo.", next: 43 }
+            ]
+        },
+        15: {
+            id: 15,
+            text: "¿Qué experiencia envolvente buscas?",
+            context: "largo, envolvente",
+            options: [
+                { letter: "a", text: "Narrativa épica.", next: 44 },
+                { letter: "b", text: "Mundos visuales impresionantes.", next: 45 },
+                { letter: "c", text: "Trama relajada.", next: 46 }
+            ]
+        },
+        16: {
+            id: 16,
+            text: "¿Qué actividad prefieres?",
+            context: "no estoy seguro, intermedio",
+            options: [
+                { letter: "a", text: "Leer tranquilo.", next: 47 },
+                { letter: "b", text: "Escuchar música relajante.", next: 48 },
+                { letter: "c", text: "Estar en la naturaleza.", next: 49 }
+            ]
+        },
+        17: {
+            id: 17,
+            text: "¿Qué diversión buscas?",
+            context: "poco tiempo, divertido",
+            options: [
+                { letter: "a", text: "Risas rápidas.", next: 50 },
+                { letter: "b", text: "Ingenio y giros.", next: 51 },
+                { letter: "c", text: "Acción ligera.", next: 52 }
+            ]
+        },
+        18: {
+            id: 18,
+            text: "¿Qué prefieres para relajarte?",
+            context: "tiempo suficiente, tranquilo",
+            options: [
+                { letter: "a", text: "Historia conmovedora.", next: 53 },
+                { letter: "b", text: "Humor cálido.", next: 54 },
+                { letter: "c", text: "Transporte a otro lugar.", next: 55 }
+            ]
+        },
+        19: {
+            id: 19,
+            text: "¿Qué ligereza buscas?",
+            context: "no me importa el tiempo, ligero",
+            options: [
+                { letter: "a", text: "Sonrisa fácil.", next: 56 },
+                { letter: "b", text: "Fácil de seguir.", next: 57 },
+                { letter: "c", text: "Toque de romance.", next: 58 }
+            ]
+        },
+        20: {
+            id: 20,
+            text: "¿Qué recuerdos buscas?",
+            context: "poco tiempo, nostálgico",
+            options: [
+                { letter: "a", text: "Infancia o juventud.", next: 59 },
+                { letter: "b", text: "Amor del pasado.", next: 60 },
+                { letter: "c", text: "Momentos familiares.", next: 61 }
+            ]
+        },
+        21: {
+            id: 21,
+            text: "¿Qué nostalgia prefieres?",
+            context: "tiempo, nostálgico",
+            options: [
+                { letter: "a", text: "Emocional profunda.", next: 62 },
+                { letter: "b", text: "Ligera con humor.", next: 63 },
+                { letter: "c", text: "Reflexiva, tiempos pasados.", next: 64 }
+            ]
+        },
+        22: {
+            id: 22,
+            text: "¿A dónde quieres viajar?",
+            context: "transporte, sin importar duración",
+            options: [
+                { letter: "a", text: "Época histórica.", next: 65 },
+                { letter: "b", text: "Lugar mágico.", next: 66 },
+                { letter: "c", text: "Amor atemporal.", next: 67 }
+            ]
+        },
+        23: {
+            id: 23,
+            text: "¿Qué adrenalina prefieres?",
+            context: "explosiones, peleas",
+            options: [
+                { letter: "a", text: "Militar o policial.", next: 68 },
+                { letter: "b", text: "Superhéroes.", next: 69 },
+                { letter: "c", text: "Crimen y persecuciones.", next: 70 }
+            ]
+        },
+        24: {
+            id: 24,
+            text: "¿Qué héroe prefieres?",
+            context: "aventuras épicas",
+            options: [
+                { letter: "a", text: "Clásico y noble.", next: 71 },
+                { letter: "b", text: "Antihéroe con defectos.", next: 72 },
+                { letter: "c", text: "Grupo diverso.", next: 73 }
+            ]
+        },
+        25: {
+            id: 25,
+            text: "¿Qué suspenso prefieres?",
+            context: "suspenso intenso",
+            options: [
+                { letter: "a", text: "Misterio pensante.", next: 74 },
+                { letter: "b", text: "Terror psicológico.", next: 75 },
+                { letter: "c", text: "Intriga con giros.", next: 76 }
+            ]
+        },
+        26: {
+            id: 26,
+            text: "¿Qué mundo exótico prefieres?",
+            context: "mundos exóticos",
+            options: [
+                { letter: "a", text: "Ciencia ficción tecnológica.", next: 77 },
+                { letter: "b", text: "Fantasía con criaturas.", next: 78 },
+                { letter: "c", text: "Postapocalíptico.", next: 79 }
+            ]
+        },
+        27: {
+            id: 27,
+            text: "¿Qué cultura te interesa?",
+            context: "culturas realistas",
+            options: [
+                { letter: "a", text: "Tradiciones antiguas.", next: 80 },
+                { letter: "b", text: "Culturas urbanas.", next: 81 },
+                { letter: "c", text: "Viajes globales.", next: 82 }
+            ]
+        },
+        28: {
+            id: 28,
+            text: "¿Qué fantasía prefieres?",
+            context: "fantasía, magia",
+            options: [
+                { letter: "a", text: "Mundos medievales.", next: 83 },
+                { letter: "b", text: "Mitología y dioses.", next: 84 },
+                { letter: "c", text: "Fantasía urbana.", next: 85 }
+            ]
+        },
+        29: {
+            id: 29,
+            text: "¿Qué comedia prefieres?",
+            context: "reír y emocionar",
+            options: [
+                { letter: "a", text: "Romántica con corazón.", next: 86 },
+                { letter: "b", text: "Dramática con mensaje.", next: 87 },
+                { letter: "c", text: "Absurda y divertida.", next: 88 }
+            ]
+        },
+        30: {
+            id: 30,
+            text: "¿Qué drama buscas?",
+            context: "drama y esperanza",
+            options: [
+                { letter: "a", text: "Redención personal.", next: 89 },
+                { letter: "b", text: "Esperanza en dificultades.", next: 90 },
+                { letter: "c", text: "Dramas familiares.", next: 91 }
+            ]
+        },
+        31: {
+            id: 31,
+            text: "¿Cómo quieres conectarte?",
+            context: "conectado con otros",
+            options: [
+                { letter: "a", text: "Historias de amistad.", next: 92 },
+                { letter: "b", text: "Amor profundo.", next: 93 },
+                { letter: "c", text: "Comunidad y unión.", next: 94 }
+            ]
+        },
+        32: {
+            id: 32,
+            text: "¿Qué superación prefieres?",
+            context: "superación personal",
+            options: [
+                { letter: "a", text: "Triunfos deportivos.", next: 95 },
+                { letter: "b", text: "Retos emocionales.", next: 96 },
+                { letter: "c", text: "Éxito profesional.", next: 97 }
+            ]
+        },
+        33: {
+            id: 33,
+            text: "¿Qué ideas te interesan?",
+            context: "cambiar perspectivas",
+            options: [
+                { letter: "a", text: "Futuro y tecnología.", next: 98 },
+                { letter: "b", text: "Dilemas éticos.", next: 99 },
+                { letter: "c", text: "Impacto humano.", next: 100 }
+            ]
+        },
+        34: {
+            id: 34,
+            text: "¿Qué conexión humana prefieres?",
+            context: "conexiones profundas",
+            options: [
+                { letter: "a", text: "Sacrificio por amor.", next: 101 },
+                { letter: "b", text: "Lealtad entre amigos.", next: 102 },
+                { letter: "c", text: "Familias unidas.", next: 103 }
+            ]
+        },
+        35: {
+            id: 35,
+            text: "¿Qué ciencia te atrae?",
+            context: "ciencia o tecnología",
+            options: [
+                { letter: "a", text: "Exploración espacial.", next: 104 },
+                { letter: "b", text: "Innovaciones tecnológicas.", next: 105 },
+                { letter: "c", text: "Descubrimientos científicos.", next: 106 }
+            ]
+        },
+        36: {
+            id: 36,
+            text: "¿Qué historia te interesa?",
+            context: "historia o eventos reales",
+            options: [
+                { letter: "a", text: "Épocas antiguas.", next: 107 },
+                { letter: "b", text: "Siglos recientes.", next: 108 },
+                { letter: "c", text: "Eventos bélicos.", next: 109 }
+            ]
+        },
+        37: {
+            id: 37,
+            text: "¿Qué cultura exploras?",
+            context: "culturas y formas de vida",
+            options: [
+                { letter: "a", text: "Culturas asiáticas.", next: 110 },
+                { letter: "b", text: "Culturas latinoamericanas.", next: 111 },
+                { letter: "c", text: "Culturas indígenas.", next: 112 }
+            ]
+        },
+        38: {
+            id: 38,
+            text: "¿Qué emoción exploras?",
+            context: "emociones profundas",
+            options: [
+                { letter: "a", text: "Duelo o pérdida.", next: 113 },
+                { letter: "b", text: "Amor no correspondido.", next: 114 },
+                { letter: "c", text: "Conflicto interno.", next: 115 }
+            ]
+        },
+        39: {
+            id: 39,
+            text: "¿Qué aspecto de la vida te interesa?",
+            context: "sentido de la vida",
+            options: [
+                { letter: "a", text: "Existencia y propósito.", next: 116 },
+                { letter: "b", text: "Búsqueda de felicidad.", next: 117 },
+                { letter: "c", text: "Legado personal.", next: 118 }
+            ]
+        },
+        40: {
+            id: 40,
+            text: "¿Qué espiritualidad buscas?",
+            context: "espiritualidad",
+            options: [
+                { letter: "a", text: "Religiosa.", next: 119 },
+                { letter: "b", text: "Conexión con la naturaleza.", next: 120 },
+                { letter: "c", text: "Paz interior.", next: 121 }
+            ]
+        },
+
+        // PREGUNTAS FINALES (41-60) - Estas llevan a recomendaciones
+        41: {
+            id: 41,
+            text: "¿Qué humor suave prefieres?",
+            context: "humor suave",
+            options: [
+                { letter: "a", text: "Situaciones cotidianas.", recommendation: "sitcom_comedy" },
+                { letter: "b", text: "Personajes excéntricos.", recommendation: "quirky_comedy" },
+                { letter: "c", text: "Toque romántico.", recommendation: "light_rom_com" }
+            ]
+        },
+        42: {
+            id: 42,
+            text: "¿Qué paisajes te relajan?",
+            context: "paisajes calmantes",
+            options: [
+                { letter: "a", text: "Naturaleza salvaje.", recommendation: "nature_documentary" },
+                { letter: "b", text: "Ciudades pintorescas.", recommendation: "slice_of_life_drama" },
+                { letter: "c", text: "Escenarios costeros.", recommendation: "coastal_drama" }
+            ]
+        },
+        43: {
+            id: 43,
+            text: "¿Qué romance prefieres?",
+            context: "romance sencillo",
+            options: [
+                { letter: "a", text: "Amor juvenil.", recommendation: "teen_rom_com" },
+                { letter: "b", text: "Romance maduro.", recommendation: "mature_romance" },
+                { letter: "c", text: "Comedia romántica.", recommendation: "romantic_comedy" }
+            ]
+        },
+        44: {
+            id: 44,
+            text: "¿Qué narrativa épica buscas?",
+            context: "narrativa épica",
+            options: [
+                { letter: "a", text: "Guerra y conquista.", recommendation: "war_epic" },
+                { letter: "b", text: "Exploración.", recommendation: "exploration_epic" },
+                { letter: "c", text: "Mitos y leyendas.", recommendation: "mythological_epic" }
+            ]
+        },
+        45: {
+            id: 45,
+            text: "¿Qué mundo visual prefieres?",
+            context: "mundos visuales",
+            options: [
+                { letter: "a", text: "Futurista tecnológico.", recommendation: "futuristic_sci_fi" },
+                { letter: "b", text: "Fantasía mágica.", recommendation: "high_fantasy" },
+                { letter: "c", text: "Histórico recreado.", recommendation: "historical_epic" }
+            ]
+        },
+        46: {
+            id: 46,
+            text: "¿Qué trama relajada prefieres?",
+            context: "trama relajada",
+            options: [
+                { letter: "a", text: "Crecimiento personal.", recommendation: "coming_of_age_drama" },
+                { letter: "b", text: "Relaciones humanas.", recommendation: "relationship_drama" },
+                { letter: "c", text: "Vida cotidiana.", recommendation: "slice_of_life_drama" }
+            ]
+        },
+        47: {
+            id: 47,
+            text: "¿Qué lectura te gusta?",
+            context: "leer tranquilo",
+            options: [
+                { letter: "a", text: "Novelas clásicas.", recommendation: "literary_adaptation" },
+                { letter: "b", text: "Historias de misterio.", recommendation: "mystery_drama" },
+                { letter: "c", text: "Relatos filosóficos.", recommendation: "philosophical_drama" }
+            ]
+        },
+        48: {
+            id: 48,
+            text: "¿Qué música te relaja?",
+            context: "música relajante",
+            options: [
+                { letter: "a", text: "Bandas sonoras épicas.", recommendation: "epic_musical_drama" },
+                { letter: "b", text: "Música suave.", recommendation: "emotional_musical" },
+                { letter: "c", text: "Ritmos folk.", recommendation: "folk_drama" }
+            ]
+        },
+        49: {
+            id: 49,
+            text: "¿Qué naturaleza prefieres?",
+            context: "naturaleza",
+            options: [
+                { letter: "a", text: "Bosques y montañas.", recommendation: "nature_adventure" },
+                { letter: "b", text: "Playas y océanos.", recommendation: "coastal_adventure" },
+                { letter: "c", text: "Paisajes urbanos naturales.", recommendation: "urban_nature_drama" }
+            ]
+        },
+        50: {
+            id: 50,
+            text: "¿Qué risas buscas?",
+            context: "risas rápidas",
+            options: [
+                { letter: "a", text: "Bromas absurdas.", recommendation: "slapstick_comedy" },
+                { letter: "b", text: "Humor inteligente.", recommendation: "witty_comedy" },
+                { letter: "c", text: "Humor familiar.", recommendation: "family_comedy" }
+            ]
+        },
+        51: {
+            id: 51,
+            text: "¿Qué ingenio prefieres?",
+            context: "ingenio y giros",
+            options: [
+                { letter: "a", text: "Diálogos brillantes.", recommendation: "smart_comedy" },
+                { letter: "b", text: "Sorpresas inesperadas.", recommendation: "twist_comedy" },
+                { letter: "c", text: "Sátira social.", recommendation: "satirical_comedy" }
+            ]
+        },
+        52: {
+            id: 52,
+            text: "¿Qué acción ligera prefieres?",
+            context: "acción ligera",
+            options: [
+                { letter: "a", text: "Aventuras cómicas.", recommendation: "action_comedy" },
+                { letter: "b", text: "Espías divertidos.", recommendation: "spy_comedy" },
+                { letter: "c", text: "Aventuras juveniles.", recommendation: "teen_adventure" }
+            ]
+        },
+        53: {
+            id: 53,
+            text: "¿Qué historia conmovedora prefieres?",
+            context: "historia conmovedora",
+            options: [
+                { letter: "a", text: "Amistad sincera.", recommendation: "friendship_drama" },
+                { letter: "b", text: "Amor familiar.", recommendation: "family_drama" },
+                { letter: "c", text: "Superación sencilla.", recommendation: "feel_good_drama" }
+            ]
+        },
+        54: {
+            id: 54,
+            text: "¿Qué humor cálido prefieres?",
+            context: "humor cálido",
+            options: [
+                { letter: "a", text: "Familias unidas.", recommendation: "family_comedy" },
+                { letter: "b", text: "Vida cotidiana.", recommendation: "slice_of_life_comedy" },
+                { letter: "c", text: "Valores tradicionales.", recommendation: "heartwarming_comedy" }
+            ]
+        },
+        55: {
+            id: 55,
+            text: "¿A dónde viajar?",
+            context: "transporte a otro lugar",
+            options: [
+                { letter: "a", text: "Lugares exóticos.", recommendation: "travel_adventure" },
+                { letter: "b", text: "Ciudades modernas.", recommendation: "urban_drama" },
+                { letter: "c", text: "Lugares históricos.", recommendation: "historical_drama" }
+            ]
+        },
+        56: {
+            id: 56,
+            text: "¿Qué sonrisa buscas?",
+            context: "sonrisa fácil",
+            options: [
+                { letter: "a", text: "Comedia optimista.", recommendation: "light_hearted_comedy" },
+                { letter: "b", text: "Final feliz.", recommendation: "uplifting_comedy" },
+                { letter: "c", text: "Personajes adorables.", recommendation: "quirky_comedy" }
+            ]
+        },
+        57: {
+            id: 57,
+            text: "¿Qué trama fácil prefieres?",
+            context: "fácil de seguir",
+            options: [
+                { letter: "a", text: "Amor simple.", recommendation: "simple_romance" },
+                { letter: "b", text: "Aventuras ligeras.", recommendation: "light_adventure" },
+                { letter: "c", text: "Dramas claros.", recommendation: "simple_drama" }
+            ]
+        },
+        58: {
+            id: 58,
+            text: "¿Qué romance prefieres?",
+            context: "toque de romance",
+            options: [
+                { letter: "a", text: "Divertido y juvenil.", recommendation: "teen_rom_com" },
+                { letter: "b", text: "Cálido y maduro.", recommendation: "mature_romance" },
+                { letter: "c", text: "Con drama.", recommendation: "romantic_drama" }
+            ]
+        },
+        59: {
+            id: 59,
+            text: "¿Qué infancia recuerdas?",
+            context: "infancia o juventud",
+            options: [
+                { letter: "a", text: "Aventuras infantiles.", recommendation: "coming_of_age_short" },
+                { letter: "b", text: "Momentos familiares.", recommendation: "family_short" },
+                { letter: "c", text: "Amistad juvenil.", recommendation: "teen_friendship_short" }
+            ]
+        },
+        60: {
+            id: 60,
+            text: "¿Qué amor pasado buscas?",
+            context: "amor del pasado",
+            options: [
+                { letter: "a", text: "Romances trágicos.", recommendation: "tragic_romance_short" },
+                { letter: "b", text: "Amores nostálgicos.", recommendation: "nostalgic_romance_short" },
+                { letter: "c", text: "Reencuentros.", recommendation: "reunion_romance_short" }
+            ]
+        },
+
+        // CONTINUACIÓN DE LAS PREGUNTAS (61-121)
+// Agregar estas preguntas al objeto que devuelve initializeQuestions()
+
+61: {
+    id: 61,
+    text: "¿Qué momentos familiares prefieres?",
+    context: "momentos familiares",
+    options: [
+        { letter: "a", text: "Reuniones felices.", recommendation: "family_reunion_short" },
+        { letter: "b", text: "Tradiciones.", recommendation: "traditional_family_short" },
+        { letter: "c", text: "Apoyo mutuo.", recommendation: "supportive_family_short" }
+    ]
+},
+62: {
+    id: 62,
+    text: "¿Qué emoción profunda buscas?",
+    context: "emocional profunda",
+    options: [
+        { letter: "a", text: "Pérdida y sanación.", recommendation: "grief_drama" },
+        { letter: "b", text: "Amor eterno.", recommendation: "eternal_love_drama" },
+        { letter: "c", text: "Sacrificio personal.", recommendation: "sacrifice_drama" }
+    ]
+},
+63: {
+    id: 63,
+    text: "¿Qué humor nostálgico prefieres?",
+    context: "ligera con humor",
+    options: [
+        { letter: "a", text: "Años 80 o 90.", recommendation: "retro_comedy" },
+        { letter: "b", text: "Juventud divertida.", recommendation: "youthful_comedy" },
+        { letter: "c", text: "Toques nostálgicos.", recommendation: "nostalgic_comedy" }
+    ]
+},
+64: {
+    id: 64,
+    text: "¿Qué época pasada te interesa?",
+    context: "reflexiva, tiempos pasados",
+    options: [
+        { letter: "a", text: "Épocas antiguas.", recommendation: "ancient_period_drama" },
+        { letter: "b", text: "Siglo XX.", recommendation: "modern_period_drama" },
+        { letter: "c", text: "Cambio social.", recommendation: "social_change_drama" }
+    ]
+},
+65: {
+    id: 65,
+    text: "¿Qué época histórica prefieres?",
+    context: "época histórica",
+    options: [
+        { letter: "a", text: "Edad Media.", recommendation: "medieval_drama" },
+        { letter: "b", text: "Siglo XIX.", recommendation: "colonial_drama" },
+        { letter: "c", text: "Siglo XX.", recommendation: "war_drama" }
+    ]
+},
+66: {
+    id: 66,
+    text: "¿Qué lugar mágico buscas?",
+    context: "lugar mágico",
+    options: [
+        { letter: "a", text: "Dragones y magia.", recommendation: "high_fantasy" },
+        { letter: "b", text: "Futurista alienígena.", recommendation: "sci_fi_fantasy" },
+        { letter: "c", text: "Místico espiritual.", recommendation: "mystical_drama" }
+    ]
+},
+67: {
+    id: 67,
+    text: "¿Qué amor atemporal prefieres?",
+    context: "amor atemporal",
+    options: [
+        { letter: "a", text: "Romances históricos.", recommendation: "historical_romance" },
+        { letter: "b", text: "Amores trágicos.", recommendation: "epic_romance" },
+        { letter: "c", text: "Amor moderno.", recommendation: "modern_romance" }
+    ]
+},
+68: {
+    id: 68,
+    text: "¿Qué acción militar prefieres?",
+    context: "militar o policial",
+    options: [
+        { letter: "a", text: "Batallas históricas.", recommendation: "historical_war_action" },
+        { letter: "b", text: "Operaciones policiales.", recommendation: "police_action" },
+        { letter: "c", text: "Misiones tácticas.", recommendation: "tactical_thriller" }
+    ]
+},
+69: {
+    id: 69,
+    text: "¿Qué superhéroe te gusta?",
+    context: "superhéroes",
+    options: [
+        { letter: "a", text: "Poderes épicos.", recommendation: "epic_superhero_movie" },
+        { letter: "b", text: "Héroes realistas.", recommendation: "grounded_superhero_movie" },
+        { letter: "c", text: "Equipos de superhéroes.", recommendation: "team_superhero_movie" }
+    ]
+},
+70: {
+    id: 70,
+    text: "¿Qué crimen prefieres?",
+    context: "crimen y persecuciones",
+    options: [
+        { letter: "a", text: "Mafias o gánsteres.", recommendation: "mafia_thriller" },
+        { letter: "b", text: "Persecuciones.", recommendation: "chase_thriller" },
+        { letter: "c", text: "Crímenes con misterio.", recommendation: "crime_mystery" }
+    ]
+},
+71: {
+    id: 71,
+    text: "¿Qué héroe clásico prefieres?",
+    context: "clásico y noble",
+    options: [
+        { letter: "a", text: "Mitológico.", recommendation: "mythological_adventure" },
+        { letter: "b", text: "Acción moderna.", recommendation: "modern_action_adventure" },
+        { letter: "c", text: "Exploración.", recommendation: "exploration_adventure" }
+    ]
+},
+72: {
+    id: 72,
+    text: "¿Qué antihéroe te atrae?",
+    context: "antihéroe",
+    options: [
+        { letter: "a", text: "Pasado oscuro.", recommendation: "dark_antihero_drama" },
+        { letter: "b", text: "Humor cínico.", recommendation: "cynical_antihero_comedy" },
+        { letter: "c", text: "Redención.", recommendation: "redemption_adventure" }
+    ]
+},
+73: {
+    id: 73,
+    text: "¿Qué grupo de héroes prefieres?",
+    context: "grupo diverso",
+    options: [
+        { letter: "a", text: "Aventureros diversos.", recommendation: "ensemble_adventure" },
+        { letter: "b", text: "Conflictos internos.", recommendation: "team_drama" },
+        { letter: "c", text: "Misiones imposibles.", recommendation: "mission_based_adventure" }
+    ]
+},
+74: {
+    id: 74,
+    text: "¿Qué misterio prefieres?",
+    context: "misterio pensante",
+    options: [
+        { letter: "a", text: "Asesinatos.", recommendation: "murder_mystery" },
+        { letter: "b", text: "Sobrenatural.", recommendation: "supernatural_mystery" },
+        { letter: "c", text: "Psicológico.", recommendation: "psychological_thriller" }
+    ]
+},
+75: {
+    id: 75,
+    text: "¿Qué terror prefieres?",
+    context: "terror psicológico",
+    options: [
+        { letter: "a", text: "Miedo sobrenatural.", recommendation: "supernatural_horror" },
+        { letter: "b", text: "Paranoia y mente.", recommendation: "psychological_horror" },
+        { letter: "c", text: "Suspense intenso.", recommendation: "suspense_horror" }
+    ]
+},
+76: {
+    id: 76,
+    text: "¿Qué intriga prefieres?",
+    context: "intriga con giros",
+    options: [
+        { letter: "a", text: "Giros inesperados.", recommendation: "plot_twist_thriller" },
+        { letter: "b", text: "Conspiraciones.", recommendation: "conspiracy_thriller" },
+        { letter: "c", text: "Traición y engaño.", recommendation: "betrayal_thriller" }
+    ]
+},
+77: {
+    id: 77,
+    text: "¿Qué ciencia ficción prefieres?",
+    context: "ciencia ficción tecnológica",
+    options: [
+        { letter: "a", text: "Viajes espaciales.", recommendation: "space_opera" },
+        { letter: "b", text: "Tecnología y robots.", recommendation: "tech_sci_fi" },
+        { letter: "c", text: "Futuros distópicos.", recommendation: "dystopian_sci_fi" }
+    ]
+},
+78: {
+    id: 78,
+    text: "¿Qué fantasía prefieres?",
+    context: "fantasía con criaturas",
+    options: [
+        { letter: "a", text: "Dragones medievales.", recommendation: "medieval_fantasy" },
+        { letter: "b", text: "Criaturas míticas.", recommendation: "epic_fantasy" },
+        { letter: "c", text: "Aventuras oscuras.", recommendation: "dark_fantasy" }
+    ]
+},
+79: {
+    id: 79,
+    text: "¿Qué postapocalíptico prefieres?",
+    context: "postapocalíptico",
+    options: [
+        { letter: "a", text: "Supervivencia.", recommendation: "survival_sci_fi" },
+        { letter: "b", text: "Sociedades reconstruidas.", recommendation: "post_apocalyptic_drama" },
+        { letter: "c", text: "Tierras desoladas.", recommendation: "wasteland_adventure" }
+    ]
+},
+80: {
+    id: 80,
+    text: "¿Qué tradiciones antiguas te interesan?",
+    context: "tradiciones antiguas",
+    options: [
+        { letter: "a", text: "Egipcias o mesopotámicas.", recommendation: "ancient_culture_drama" },
+        { letter: "b", text: "Nórdicas o celtas.", recommendation: "nordic_celtic_drama" },
+        { letter: "c", text: "Orientales.", recommendation: "eastern_historical_drama" }
+    ]
+},
+81: {
+    id: 81,
+    text: "¿Qué cultura urbana prefieres?",
+    context: "culturas urbanas",
+    options: [
+        { letter: "a", text: "Ciudades vibrantes.", recommendation: "urban_drama" },
+        { letter: "b", text: "Subculturas urbanas.", recommendation: "subculture_drama" },
+        { letter: "c", text: "Crimen urbano.", recommendation: "urban_crime_drama" }
+    ]
+},
+82: {
+    id: 82,
+    text: "¿Qué viaje global prefieres?",
+    context: "viajes globales",
+    options: [
+        { letter: "a", text: "Naturaleza.", recommendation: "nature_travel_documentary" },
+        { letter: "b", text: "Culturas mundiales.", recommendation: "cultural_travel_documentary" },
+        { letter: "c", text: "Exploraciones históricas.", recommendation: "historical_travel_drama" }
+    ]
+},
+83: {
+    id: 83,
+    text: "¿Qué magia medieval prefieres?",
+    context: "mundos medievales",
+    options: [
+        { letter: "a", text: "Caballeros y magos.", recommendation: "knight_fantasy" },
+        { letter: "b", text: "Brujas y hechizos.", recommendation: "witch_fantasy" },
+        { letter: "c", text: "Aventuras épicas.", recommendation: "epic_fantasy" }
+    ]
+},
+84: {
+    id: 84,
+    text: "¿Qué mitología te atrae?",
+    context: "mitología y dioses",
+    options: [
+        { letter: "a", text: "Griega o romana.", recommendation: "greek_roman_mythology" },
+        { letter: "b", text: "Nórdica.", recommendation: "norse_mythology" },
+        { letter: "c", text: "Global.", recommendation: "global_mythology" }
+    ]
+},
+85: {
+    id: 85,
+    text: "¿Qué fantasía urbana prefieres?",
+    context: "fantasía urbana",
+    options: [
+        { letter: "a", text: "Magia en ciudades.", recommendation: "urban_fantasy" },
+        { letter: "b", text: "Criaturas modernas.", recommendation: "modern_mythical_fantasy" },
+        { letter: "c", text: "Magia oculta.", recommendation: "hidden_magic_fantasy" }
+    ]
+},
+86: {
+    id: 86,
+    text: "¿Qué comedia romántica prefieres?",
+    context: "romántica con corazón",
+    options: [
+        { letter: "a", text: "Divertida y ligera.", recommendation: "light_rom_com" },
+        { letter: "b", text: "Con humor profundo.", recommendation: "heartfelt_rom_com" },
+        { letter: "c", text: "Con giros.", recommendation: "twist_rom_com" }
+    ]
+},
+87: {
+    id: 87,
+    text: "¿Qué comedia dramática prefieres?",
+    context: "dramática con mensaje",
+    options: [
+        { letter: "a", text: "Mensajes profundos.", recommendation: "dramedy" },
+        { letter: "b", text: "Crecimiento personal.", recommendation: "coming_of_age_dramedy" },
+        { letter: "c", text: "Temas sociales.", recommendation: "social_dramedy" }
+    ]
+},
+88: {
+    id: 88,
+    text: "¿Qué comedia absurda prefieres?",
+    context: "absurda y divertida",
+    options: [
+        { letter: "a", text: "Humor surrealista.", recommendation: "surreal_comedy" },
+        { letter: "b", text: "Personajes excéntricos.", recommendation: "quirky_comedy" },
+        { letter: "c", text: "Parodias.", recommendation: "parody_comedy" }
+    ]
+},
+89: {
+    id: 89,
+    text: "¿Qué redención prefieres?",
+    context: "redención personal",
+    options: [
+        { letter: "a", text: "Segundas oportunidades.", recommendation: "second_chance_drama" },
+        { letter: "b", text: "Transformación personal.", recommendation: "transformation_drama" },
+        { letter: "c", text: "Arrepentimiento.", recommendation: "redemption_drama" }
+    ]
+},
+90: {
+    id: 90,
+    text: "¿Qué esperanza prefieres?",
+    context: "esperanza en dificultades",
+    options: [
+        { letter: "a", text: "Resiliencia.", recommendation: "resilience_drama" },
+        { letter: "b", text: "Comunidad unida.", recommendation: "community_drama" },
+        { letter: "c", text: "Triunfo personal.", recommendation: "uplifting_drama" }
+    ]
+},
+91: {
+    id: 91,
+    text: "¿Qué drama familiar prefieres?",
+    context: "dramas familiares",
+    options: [
+        { letter: "a", text: "Conflictos resueltos.", recommendation: "family_resolution_drama" },
+        { letter: "b", text: "Amor familiar.", recommendation: "family_love_drama" },
+        { letter: "c", text: "Legado familiar.", recommendation: "family_legacy_drama" }
+    ]
+},
+92: {
+    id: 92,
+    text: "¿Qué amistad prefieres?",
+    context: "historias de amistad",
+    options: [
+        { letter: "a", text: "Juveniles y divertidas.", recommendation: "teen_friendship_drama" },
+        { letter: "b", text: "Duraderas y profundas.", recommendation: "lifelong_friendship_drama" },
+        { letter: "c", text: "En tiempos difíciles.", recommendation: "hardship_friendship_drama" }
+    ]
+},
+93: {
+    id: 93,
+    text: "¿Qué amor profundo prefieres?",
+    context: "amor profundo",
+    options: [
+        { letter: "a", text: "Apasionado.", recommendation: "passionate_romance" },
+        { letter: "b", text: "Sacrificado.", recommendation: "sacrificial_romance" },
+        { letter: "c", text: "Eterno.", recommendation: "eternal_love_drama" }
+    ]
+},
+94: {
+    id: 94,
+    text: "¿Qué comunidad prefieres?",
+    context: "comunidad y unión",
+    options: [
+        { letter: "a", text: "Pueblos pequeños.", recommendation: "small_town_drama" },
+        { letter: "b", text: "Unión cultural.", recommendation: "cultural_community_drama" },
+        { letter: "c", text: "Lucha colectiva.", recommendation: "collective_struggle_drama" }
+    ]
+},
+95: {
+    id: 95,
+    text: "¿Qué triunfo deportivo prefieres?",
+    context: "triunfos deportivos",
+    options: [
+        { letter: "a", text: "Equipos deportivos.", recommendation: "team_sports_drama" },
+        { letter: "b", text: "Atletas individuales.", recommendation: "individual_sports_drama" },
+        { letter: "c", text: "Competencia intensa.", recommendation: "competitive_sports_drama" }
+    ]
+},
+96: {
+    id: 96,
+    text: "¿Qué reto emocional prefieres?",
+    context: "retos emocionales",
+    options: [
+        { letter: "a", text: "Duelo o pérdida.", recommendation: "grief_drama" },
+        { letter: "b", text: "Miedos personales.", recommendation: "personal_fear_drama" },
+        { letter: "c", text: "Relaciones rotas.", recommendation: "relationship_repair_drama" }
+    ]
+},
+97: {
+    id: 97,
+    text: "¿Qué éxito profesional prefieres?",
+    context: "éxito profesional",
+    options: [
+        { letter: "a", text: "Emprendimiento.", recommendation: "entrepreneurial_drama" },
+        { letter: "b", text: "Ambición y poder.", recommendation: "ambition_drama" },
+        { letter: "c", text: "Superación académica.", recommendation: "academic_drama" }
+    ]
+},
+98: {
+    id: 98,
+    text: "¿Qué futuro te interesa?",
+    context: "futuro y tecnología",
+    options: [
+        { letter: "a", text: "Inteligencia artificial.", recommendation: "ai_sci_fi" },
+        { letter: "b", text: "Exploración espacial.", recommendation: "space_exploration_sci_fi" },
+        { letter: "c", text: "Utopías o distopías.", recommendation: "utopian_dystopian_sci_fi" }
+    ]
+},
+99: {
+    id: 99,
+    text: "¿Qué dilema ético prefieres?",
+    context: "dilemas éticos",
+    options: [
+        { letter: "a", text: "Conflictos personales.", recommendation: "moral_dilemma_drama" },
+        { letter: "b", text: "Ética en la ciencia.", recommendation: "science_ethics_drama" },
+        { letter: "c", text: "Justicia social.", recommendation: "social_justice_drama" }
+    ]
+},
+100: {
+    id: 100,
+    text: "¿Qué impacto humano te interesa?",
+    context: "impacto humano",
+    options: [
+        { letter: "a", text: "Medio ambiente.", recommendation: "environmental_documentary" },
+        { letter: "b", text: "Cambios sociales.", recommendation: "social_impact_documentary" },
+        { letter: "c", text: "Avances científicos.", recommendation: "science_history_documentary" }
+    ]
+},
+101: {
+    id: 101,
+    text: "¿Qué sacrificio por amor prefieres?",
+    context: "sacrificio por amor",
+    options: [
+        { letter: "a", text: "Romántico.", recommendation: "romantic_sacrifice_drama" },
+        { letter: "b", text: "Familiar.", recommendation: "family_sacrifice_drama" },
+        { letter: "c", text: "Por la humanidad.", recommendation: "heroic_sacrifice_drama" }
+    ]
+},
+102: {
+    id: 102,
+    text: "¿Qué lealtad entre amigos prefieres?",
+    context: "lealtad entre amigos",
+    options: [
+        { letter: "a", text: "En aventuras.", recommendation: "adventure_friendship_drama" },
+        { letter: "b", text: "En crisis.", recommendation: "crisis_friendship_drama" },
+        { letter: "c", text: "Confianza mutua.", recommendation: "trust_friendship_drama" }
+    ]
+},
+103: {
+    id: 103,
+    text: "¿Qué familia unida prefieres?",
+    context: "familias unidas",
+    options: [
+        { letter: "a", text: "Superando conflictos.", recommendation: "family_conflict_drama" },
+        { letter: "b", text: "En aventuras.", recommendation: "family_adventure_drama" },
+        { letter: "c", text: "Con tradiciones.", recommendation: "traditional_family_drama" }
+    ]
+},
+104: {
+    id: 104,
+    text: "¿Qué exploración espacial prefieres?",
+    context: "exploración espacial",
+    options: [
+        { letter: "a", text: "Viajes intergalácticos.", recommendation: "space_opera" },
+        { letter: "b", text: "Contacto alienígena.", recommendation: "alien_sci_fi" },
+        { letter: "c", text: "Colonización planetaria.", recommendation: "colonization_sci_fi" }
+    ]
+},
+105: {
+    id: 105,
+    text: "¿Qué tecnología prefieres?",
+    context: "innovaciones tecnológicas",
+    options: [
+        { letter: "a", text: "Robótica.", recommendation: "robot_sci_fi" },
+        { letter: "b", text: "Inteligencia artificial.", recommendation: "ai_sci_fi" },
+        { letter: "c", text: "Realidad virtual.", recommendation: "vr_sci_fi" }
+    ]
+},
+106: {
+    id: 106,
+    text: "¿Qué descubrimiento científico prefieres?",
+    context: "descubrimientos científicos",
+    options: [
+        { letter: "a", text: "Biología y naturaleza.", recommendation: "biology_documentary" },
+        { letter: "b", text: "Física y cosmos.", recommendation: "physics_documentary" },
+        { letter: "c", text: "Tecnología emergente.", recommendation: "tech_documentary" }
+    ]
+},
+107: {
+    id: 107,
+    text: "¿Qué época antigua te interesa?",
+    context: "épocas antiguas",
+    options: [
+        { letter: "a", text: "Egipto o Mesopotamia.", recommendation: "ancient_culture_drama" },
+        { letter: "b", text: "Grecia o Roma.", recommendation: "greek_roman_drama" },
+        { letter: "c", text: "Edad Media.", recommendation: "medieval_drama" }
+    ]
+},
+108: {
+    id: 108,
+    text: "¿Qué siglo reciente prefieres?",
+    context: "siglos recientes",
+    options: [
+        { letter: "a", text: "Siglo XIX.", recommendation: "colonial_drama" },
+        { letter: "b", text: "Siglo XX temprano.", recommendation: "early_20th_century_drama" },
+        { letter: "c", text: "Siglo XX tardío.", recommendation: "modern_history_drama" }
+    ]
+},
+109: {
+    id: 109,
+    text: "¿Qué evento bélico te interesa?",
+    context: "eventos bélicos",
+    options: [
+        { letter: "a", text: "Guerras mundiales.", recommendation: "war_drama" },
+        { letter: "b", text: "Conflictos modernos.", recommendation: "modern_war_drama" },
+        { letter: "c", text: "Batallas históricas.", recommendation: "historical_war_drama" }
+    ]
+},
+110: {
+    id: 110,
+    text: "¿Qué cultura asiática prefieres?",
+    context: "culturas asiáticas",
+    options: [
+        { letter: "a", text: "Japonesa.", recommendation: "japanese_cultural_drama" },
+        { letter: "b", text: "China.", recommendation: "chinese_cultural_drama" },
+        { letter: "c", text: "India.", recommendation: "indian_cultural_drama" }
+    ]
+},
+111: {
+    id: 111,
+    text: "¿Qué cultura latinoamericana prefieres?",
+    context: "culturas latinoamericanas",
+    options: [
+        { letter: "a", text: "Mexicana.", recommendation: "mexican_cultural_drama" },
+        { letter: "b", text: "Brasileña.", recommendation: "brazilian_cultural_drama" },
+        { letter: "c", text: "Argentina.", recommendation: "argentine_cultural_drama" }
+    ]
+},
+112: {
+    id: 112,
+    text: "¿Qué cultura indígena prefieres?",
+    context: "culturas indígenas",
+    options: [
+        { letter: "a", text: "Americana.", recommendation: "native_american_documentary" },
+        { letter: "b", text: "Africana.", recommendation: "african_indigenous_documentary" },
+        { letter: "c", text: "Australiana.", recommendation: "australian_indigenous_documentary" }
+    ]
+},
+113: {
+    id: 113,
+    text: "¿Qué duelo prefieres?",
+    context: "duelo o pérdida",
+    options: [
+        { letter: "a", text: "Pérdida personal.", recommendation: "personal_grief_drama" },
+        { letter: "b", text: "Pérdida comunitaria.", recommendation: "community_grief_drama" },
+        { letter: "c", text: "Sanación tras pérdida.", recommendation: "healing_drama" }
+    ]
+},
+114: {
+    id: 114,
+    text: "¿Qué amor no correspondido prefieres?",
+    context: "amor no correspondido",
+    options: [
+        { letter: "a", text: "Trágico.", recommendation: "tragic_romance" },
+        { letter: "b", text: "Con esperanza.", recommendation: "hopeful_romance" },
+        { letter: "c", text: "Con conflicto.", recommendation: "conflicted_romance" }
+    ]
+},
+115: {
+    id: 115,
+    text: "¿Qué conflicto interno prefieres?",
+    context: "conflicto interno",
+    options: [
+        { letter: "a", text: "Identidad personal.", recommendation: "identity_drama" },
+        { letter: "b", text: "Dilemas morales.", recommendation: "moral_conflict_drama" },
+        { letter: "c", text: "Miedos internos.", recommendation: "fear_drama" }
+    ]
+},
+116: {
+    id: 116,
+    text: "¿Qué propósito te interesa?",
+    context: "existencia y propósito",
+    options: [
+        { letter: "a", text: "Sentido de la vida.", recommendation: "existential_drama" },
+        { letter: "b", text: "Búsqueda espiritual.", recommendation: "spiritual_drama" },
+        { letter: "c", text: "Legado personal.", recommendation: "legacy_drama" }
+    ]
+},
+117: {
+    id: 117,
+    text: "¿Qué felicidad buscas?",
+    context: "búsqueda de felicidad",
+    options: [
+        { letter: "a", text: "Felicidad personal.", recommendation: "personal_happiness_drama" },
+        { letter: "b", text: "Felicidad comunitaria.", recommendation: "community_happiness_drama" },
+        { letter: "c", text: "Felicidad romántica.", recommendation: "romantic_happiness_drama" }
+    ]
+},
+118: {
+    id: 118,
+    text: "¿Qué legado prefieres?",
+    context: "legado personal",
+    options: [
+        { letter: "a", text: "Legado familiar.", recommendation: "family_legacy_drama" },
+        { letter: "b", text: "Legado profesional.", recommendation: "professional_legacy_drama" },
+        { letter: "c", text: "Legado social.", recommendation: "social_legacy_drama" }
+    ]
+},
+119: {
+    id: 119,
+    text: "¿Qué espiritualidad religiosa prefieres?",
+    context: "religiosa",
+    options: [
+        { letter: "a", text: "Cristiana.", recommendation: "christian_drama" },
+        { letter: "b", text: "Islámica.", recommendation: "islamic_drama" },
+        { letter: "c", text: "Budista.", recommendation: "buddhist_drama" }
+    ]
+},
+120: {
+    id: 120,
+    text: "¿Qué conexión con la naturaleza prefieres?",
+    context: "conexión con la naturaleza",
+    options: [
+        { letter: "a", text: "Bosques y montañas.", recommendation: "forest_spiritual_drama" },
+        { letter: "b", text: "Océanos y costas.", recommendation: "coastal_spiritual_drama" },
+        { letter: "c", text: "Desiertos y llanuras.", recommendation: "desert_spiritual_drama" }
+    ]
+},
+121: {
+    id: 121,
+    text: "¿Qué paz interior buscas?",
+    context: "paz interior",
+    options: [
+        { letter: "a", text: "Meditación y calma.", recommendation: "meditative_drama" },
+        { letter: "b", text: "Reflexión personal.", recommendation: "personal_reflection_drama" },
+        { letter: "c", text: "Conexión espiritual.", recommendation: "spiritual_connection_drama" }
+    ]
+
+}
+    };
+}
+        
+
+        // Esta función será implementada en la PARTE 4
+        initializeRecommendations() {
+    return {
+        // COMEDIAS
+        sitcom_comedy: {
+            title: "Friends",
+            description: "Una comedia sobre situaciones cotidianas que te hará reír con su humor suave y personajes entrañables.",
+            genre: "Comedia Situacional",
+            mood: "Relajante • Humor Cotidiano"
+        },
+        quirky_comedy: {
+            title: "The Grand Budapest Hotel",
+            description: "Una comedia excéntrica con personajes únicos y un estilo visual distintivo de Wes Anderson.",
+            genre: "Comedia Excéntrica",
+            mood: "Divertido • Visual"
+        },
+        light_rom_com: {
+            title: "You've Got Mail",
+            description: "Una comedia romántica ligera y encantadora con un toque de nostalgia y romance moderno.",
+            genre: "Comedia Romántica Ligera",
+            mood: "Romántico • Nostálgico"
+        },
+        smart_comedy: {
+            title: "In Bruges",
+            description: "Comedia inteligente con diálogos brillantes y humor negro sofisticado.",
+            genre: "Comedia Inteligente",
+            mood: "Ingenioso • Oscuro"
+        },
+        twist_comedy: {
+            title: "Kiss Kiss Bang Bang",
+            description: "Comedia con sorpresas inesperadas y giros narrativos divertidos.",
+            genre: "Comedia de Giros",
+            mood: "Sorprendente • Noir"
+        },
+        satirical_comedy: {
+            title: "Don't Look Up",
+            description: "Sátira social que critica la sociedad moderna con humor inteligente.",
+            genre: "Comedia Satírica",
+            mood: "Satírico • Social"
+        },
+        action_comedy: {
+            title: "Rush Hour",
+            description: "Aventuras cómicas que combinan acción ligera con humor físico.",
+            genre: "Comedia de Acción",
+            mood: "Acción • Divertido"
+        },
+        spy_comedy: {
+            title: "Kingsman",
+            description: "Comedia de espías divertidos con acción estilizada y humor británico.",
+            genre: "Comedia de Espías",
+            mood: "Espías • Estilizado"
+        },
+        slapstick_comedy: {
+            title: "The Mask",
+            description: "Comedia física con bromas absurdas y humor visual exagerado.",
+            genre: "Comedia Física",
+            mood: "Absurdo • Divertido"
+        },
+        witty_comedy: {
+            title: "The Princess Bride",
+            description: "Comedia inteligente con diálogos brillantes y humor sofisticado.",
+            genre: "Comedia Inteligente",
+            mood: "Ingenioso • Aventura"
+        },
+        family_comedy: {
+            title: "The Incredibles",
+            description: "Comedia familiar que entretiene a toda la familia con humor para todas las edades.",
+            genre: "Comedia Familiar",
+            mood: "Familiar • Superhéroes"
+        },
+        slice_of_life_comedy: {
+            title: "Little Miss Sunshine",
+            description: "Comedia sobre vida cotidiana con humor cálido y personajes entrañables.",
+            genre: "Comedia de la Vida",
+            mood: "Cálido • Familiar"
+        },
+        heartwarming_comedy: {
+            title: "Paddington",
+            description: "Comedia con valores tradicionales que calentará tu corazón.",
+            genre: "Comedia Entrañable",
+            mood: "Entrañable • Familiar"
+        },
+        light_hearted_comedy: {
+            title: "Mamma Mia!",
+            description: "Comedia optimista que te sacará sonrisas fáciles con canciones pegajosas.",
+            genre: "Comedia Musical",
+            mood: "Optimista • Musical"
+        },
+        uplifting_comedy: {
+            title: "The Pursuit of Happyness",
+            description: "Comedia con final feliz que te inspirará con su mensaje positivo.",
+            genre: "Comedia Inspiradora",
+            mood: "Inspirador • Final Feliz"
+        },
+        teen_rom_com: {
+            title: "10 Things I Hate About You",
+            description: "Comedia romántica juvenil llena de energía y humor adolescente.",
+            genre: "Comedia Romántica Juvenil",
+            mood: "Juvenil • Divertido"
+        },
+        heartfelt_rom_com: {
+            title: "Crazy, Stupid, Love",
+            description: "Comedia romántica con humor profundo que combina risas y emociones perfectamente.",
+            genre: "Comedia Romántica Profunda",
+            mood: "Romántico • Emotivo"
+        },
+        twist_rom_com: {
+            title: "500 Days of Summer",
+            description: "Comedia romántica con giros narrativos que subvierte las expectativas del género.",
+            genre: "Comedia Romántica Alternativa",
+            mood: "Creativo • No Convencional"
+        },
+        dramedy: {
+            title: "Little Miss Sunshine",
+            description: "Comedia dramática con mensajes profundos sobre familia y perseverancia.",
+            genre: "Comedia Dramática",
+            mood: "Reflexivo • Humor"
+        },
+        coming_of_age_dramedy: {
+            title: "Lady Bird",
+            description: "Comedia dramática sobre crecimiento personal durante la adolescencia.",
+            genre: "Coming-of-Age Dramático",
+            mood: "Juvenil • Emotivo"
+        },
+        social_dramedy: {
+            title: "Thank You for Smoking",
+            description: "Comedia dramática que aborda temas sociales con humor inteligente.",
+            genre: "Dramedia Social",
+            mood: "Social • Inteligente"
+        },
+        surreal_comedy: {
+            title: "Eternal Sunshine of the Spotless Mind",
+            description: "Comedia surrealista con humor único y elementos fantásticos.",
+            genre: "Comedia Surrealista",
+            mood: "Surrealista • Creativo"
+        },
+        parody_comedy: {
+            title: "Galaxy Quest",
+            description: "Parodia divertida que hace humor de los géneros de ciencia ficción.",
+            genre: "Comedia Parodia",
+            mood: "Parodia • Sci-Fi"
+        },
+        retro_comedy: {
+            title: "Dazed and Confused",
+            description: "Comedia nostálgica ambientada en los años 70 con humor de época.",
+            genre: "Comedia Retro",
+            mood: "Nostálgico • Retro"
+        },
+        youthful_comedy: {
+            title: "Superbad",
+            description: "Comedia juvenil divertida sobre la amistad y la adolescencia.",
+            genre: "Comedia Juvenil",
+            mood: "Juvenil • Amistad"
+        },
+        nostalgic_comedy: {
+            title: "The Way Way Back",
+            description: "Comedia con toques nostálgicos sobre el crecimiento y los veranos de la infancia.",
+            genre: "Comedia Nostálgica",
+            mood: "Nostálgico • Crecimiento"
+        },
+
+        // DOCUMENTALES
+        nature_documentary: {
+            title: "Planet Earth",
+            description: "Documental impresionante sobre la naturaleza salvaje que te relajará con paisajes espectaculares.",
+            genre: "Documental de Naturaleza",
+            mood: "Relajante • Educativo"
+        },
+        nature_travel_documentary: {
+            title: "Wild",
+            description: "Documental de viajes por la naturaleza que explora paisajes salvajes y aventuras al aire libre.",
+            genre: "Documental de Viajes Naturales",
+            mood: "Aventura • Naturaleza"
+        },
+        cultural_travel_documentary: {
+            title: "Anthony Bourdain: Parts Unknown",
+            description: "Documental de viajes que explora culturas mundiales a través de la comida y las tradiciones.",
+            genre: "Documental Cultural de Viajes",
+            mood: "Cultural • Gastronómico"
+        },
+        historical_travel_drama: {
+            title: "The Way",
+            description: "Drama de viajes que explora rutas históricas como el Camino de Santiago.",
+            genre: "Drama de Viajes Históricos",
+            mood: "Espiritual • Histórico"
+        },
+        biology_documentary: {
+            title: "My Octopus Teacher",
+            description: "Documental fascinante sobre biología marina y la conexión con la naturaleza.",
+            genre: "Documental de Biología",
+            mood: "Educativo • Emocional"
+        },
+        physics_documentary: {
+            title: "Cosmos",
+            description: "Documental sobre física y el cosmos que explora los misterios del universo.",
+            genre: "Documental de Física",
+            mood: "Educativo • Cósmico"
+        },
+        tech_documentary: {
+            title: "The Social Dilemma",
+            description: "Documental sobre tecnología emergente y su impacto en la sociedad.",
+            genre: "Documental Tecnológico",
+            mood: "Educativo • Contemporáneo"
+        },
+        environmental_documentary: {
+            title: "An Inconvenient Truth",
+            description: "Documental sobre el medio ambiente y el impacto humano en el planeta.",
+            genre: "Documental Ambiental",
+            mood: "Educativo • Ambiental"
+        },
+        social_impact_documentary: {
+            title: "13th",
+            description: "Documental sobre cambios sociales y justicia que examina el sistema carcelario.",
+            genre: "Documental Social",
+            mood: "Educativo • Social"
+        },
+        science_history_documentary: {
+            title: "Hidden Figures",
+            description: "Documental dramatizado sobre avances científicos y figuras históricas importantes.",
+            genre: "Documental Histórico Científico",
+            mood: "Inspirador • Histórico"
+        },
+        native_american_documentary: {
+            title: "Smoke Signals",
+            description: "Documental sobre cultura indígena americana y tradiciones nativas.",
+            genre: "Documental Indígena",
+            mood: "Cultural • Tradicional"
+        },
+        african_indigenous_documentary: {
+            title: "The Gods Must Be Crazy",
+            description: "Documental que explora culturas indígenas africanas con humor y respeto.",
+            genre: "Documental Cultural Africano",
+            mood: "Cultural • Humor"
+        },
+        australian_indigenous_documentary: {
+            title: "Rabbit-Proof Fence",
+            description: "Documental dramatizado sobre culturas indígenas australianas.",
+            genre: "Documental Indígena Australiano",
+            mood: "Cultural • Histórico"
+        },
+
+        // DRAMAS
+        slice_of_life_drama: {
+            title: "Lost in Translation",
+            description: "Drama contemplativo ambientado en ciudades pintorescas que explora la soledad y la conexión.",
+            genre: "Drama de la Vida",
+            mood: "Contemplativo • Urbano"
+        },
+        coastal_drama: {
+            title: "The Beach",
+            description: "Drama ambientado en escenarios costeros paradisíacos que explora la búsqueda de paraíso.",
+            genre: "Drama Costero",
+            mood: "Aventura • Tropical"
+        },
+        coming_of_age_drama: {
+            title: "Stand by Me",
+            description: "Drama de crecimiento personal que explora la transición de la niñez a la adultez.",
+            genre: "Drama de Crecimiento",
+            mood: "Nostálgico • Emotivo"
+        },
+        relationship_drama: {
+            title: "Marriage Story",
+            description: "Drama sobre relaciones humanas que explora la complejidad del amor y el divorcio.",
+            genre: "Drama de Relaciones",
+            mood: "Emotivo • Realista"
+        },
+        literary_adaptation: {
+            title: "Pride and Prejudice",
+            description: "Adaptación literaria de novela clásica con diálogos elegantes y romance atemporal.",
+            genre: "Adaptación Literaria",
+            mood: "Clásico • Romántico"
+        },
+        mystery_drama: {
+            title: "The Sixth Sense",
+            description: "Drama de misterio que te mantendrá pensando con sus giros inesperados.",
+            genre: "Drama de Misterio",
+            mood: "Misterioso • Suspense"
+        },
+        philosophical_drama: {
+            title: "The Matrix",
+            description: "Drama filosófico que explora relatos sobre la realidad y la percepción.",
+            genre: "Drama Filosófico",
+            mood: "Filosófico • Sci-Fi"
+        },
+        urban_drama: {
+            title: "La La Land",
+            description: "Drama urbano ambientado en ciudades modernas con romance y música.",
+            genre: "Drama Urbano",
+            mood: "Urbano • Musical"
+        },
+        historical_drama: {
+            title: "Amadeus",
+            description: "Drama histórico ambientado en lugares y épocas del pasado.",
+            genre: "Drama Histórico",
+            mood: "Histórico • Musical"
+        },
+        friendship_drama: {
+            title: "The Shawshank Redemption",
+            description: "Drama sobre amistad sincera que explora la lealtad y la esperanza.",
+            genre: "Drama de Amistad",
+            mood: "Emotivo • Esperanza"
+        },
+        family_drama: {
+            title: "This Is Us",
+            description: "Drama familiar sobre amor familiar y las complejidades de las relaciones familiares.",
+            genre: "Drama Familiar",
+            mood: "Emotivo • Familiar"
+        },
+        feel_good_drama: {
+            title: "The Pursuit of Happyness",
+            description: "Drama de superación sencilla que te inspirará con su mensaje positivo.",
+            genre: "Drama Inspirador",
+            mood: "Inspirador • Emotivo"
+        },
+        urban_nature_drama: {
+            title: "Her",
+            description: "Drama urbano que encuentra naturaleza en paisajes urbanos modernos.",
+            genre: "Drama Urbano Natural",
+            mood: "Moderno • Contemplativo"
+        },
+        grief_drama: {
+            title: "Manchester by the Sea",
+            description: "Drama profundamente emocional que explora el duelo y la pérdida.",
+            genre: "Drama de Duelo",
+            mood: "Profundo • Emotivo"
+        },
+        eternal_love_drama: {
+            title: "The Notebook",
+            description: "Drama sobre amor eterno que trasciende el tiempo y las circunstancias.",
+            genre: "Drama de Amor Eterno",
+            mood: "Romántico • Atemporal"
+        },
+        sacrifice_drama: {
+            title: "Saving Private Ryan",
+            description: "Drama sobre sacrificio personal en contextos de guerra y heroísmo.",
+            genre: "Drama de Sacrificio",
+            mood: "Heroico • Emotivo"
+        },
+        ancient_period_drama: {
+            title: "Gladiator",
+            description: "Drama de época ambientado en épocas antiguas con gran espectáculo visual.",
+            genre: "Drama de Época Antigua",
+            mood: "Épico • Histórico"
+        },
+        modern_period_drama: {
+            title: "Mad Men",
+            description: "Drama de época del siglo XX que examina cambios sociales y culturales.",
+            genre: "Drama de Época Moderna",
+            mood: "Elegante • Social"
+        },
+        social_change_drama: {
+            title: "Selma",
+            description: "Drama reflexivo sobre cambio social y movimientos de derechos civiles.",
+            genre: "Drama de Cambio Social",
+            mood: "Inspirador • Histórico"
+        },
+
+        // ROMANCES
+        mature_romance: {
+            title: "The Notebook",
+            description: "Romance maduro y profundo que explora el amor duradero a través del tiempo.",
+            genre: "Romance Maduro",
+            mood: "Romántico • Emotivo"
+        },
+        romantic_comedy: {
+            title: "When Harry Met Sally",
+            description: "La comedia romántica clásica que define el género con diálogos brillantes.",
+            genre: "Comedia Romántica Clásica",
+            mood: "Clásico • Romántico"
+        },
+        simple_romance: {
+            title: "The Holiday",
+            description: "Romance simple y encantador sobre amor y nuevos comienzos.",
+            genre: "Romance Simple",
+            mood: "Ligero • Romántico"
+        },
+        romantic_drama: {
+            title: "A Star is Born",
+            description: "Drama romántico con elementos musicales que combina amor y tragedia.",
+            genre: "Drama Romántico",
+            mood: "Emotivo • Musical"
+        },
+        tragic_romance_short: {
+            title: "Blue Valentine",
+            description: "Romance breve y trágico que explora el deterioro de una relación.",
+            genre: "Romance Trágico",
+            mood: "Melancólico • Intenso"
+        },
+        nostalgic_romance_short: {
+            title: "Before Sunset",
+            description: "Romance nostálgico breve sobre reencuentros y segundas oportunidades.",
+            genre: "Romance Nostálgico",
+            mood: "Nostálgico • Contemplativo"
+        },
+        reunion_romance_short: {
+            title: "The Time Traveler's Wife",
+            description: "Romance sobre reencuentros que trasciende el tiempo.",
+            genre: "Romance de Reencuentro",
+            mood: "Fantástico • Emotivo"
+        },
+        historical_romance: {
+            title: "Pride and Prejudice",
+            description: "Romance histórico ambientado en épocas pasadas con elegancia y refinamiento.",
+            genre: "Romance Histórico",
+            mood: "Elegante • Clásico"
+        },
+        epic_romance: {
+            title: "Titanic",
+            description: "Romance épico que combina amor apasionado con tragedia histórica.",
+            genre: "Romance Épico",
+            mood: "Épico • Trágico"
+        },
+        modern_romance: {
+            title: "Her",
+            description: "Romance moderno que explora el amor en la era digital.",
+            genre: "Romance Moderno",
+            mood: "Contemporáneo • Reflexivo"
+        },
+        passionate_romance: {
+            title: "Dirty Dancing",
+            description: "Romance apasionado lleno de música, baile y química entre protagonistas.",
+            genre: "Romance Apasionado",
+            mood: "Apasionado • Musical"
+        },
+        sacrificial_romance: {
+            title: "Casablanca",
+            description: "Romance sobre amor sacrificado en tiempos de guerra.",
+            genre: "Romance de Sacrificio",
+            mood: "Clásico • Noble"
+        },
+        tragic_romance: {
+            title: "Romeo and Juliet",
+            description: "Romance trágico clásico sobre amor no correspondido y destino.",
+            genre: "Romance Trágico Clásico",
+            mood: "Trágico • Clásico"
+        },
+        hopeful_romance: {
+            title: "Sleepless in Seattle",
+            description: "Romance con esperanza sobre el destino y las segundas oportunidades.",
+            genre: "Romance Esperanzador",
+            mood: "Optimista • Destino"
+        },
+        conflicted_romance: {
+            title: "The English Patient",
+            description: "Romance con conflicto emocional ambientado en tiempos de guerra.",
+            genre: "Romance Conflictivo",
+            mood: "Complejo • Bélico"
+        },
+        romantic_sacrifice_drama: {
+            title: "The Fault in Our Stars",
+            description: "Drama romántico sobre sacrificio por amor ante circunstancias adversas.",
+            genre: "Drama Romántico de Sacrificio",
+            mood: "Emotivo • Sacrificio"
+        },
+        personal_happiness_drama: {
+            title: "Eat Pray Love",
+            description: "Drama sobre la búsqueda de felicidad personal a través del autodescubrimiento.",
+            genre: "Drama de Felicidad Personal",
+            mood: "Inspirador • Autodescubrimiento"
+        },
+        community_happiness_drama: {
+            title: "It's a Wonderful Life",
+            description: "Drama sobre felicidad comunitaria y el impacto positivo en otros.",
+            genre: "Drama de Felicidad Comunitaria",
+            mood: "Inspirador • Comunidad"
+        },
+        romantic_happiness_drama: {
+            title: "Love Actually",
+            description: "Drama sobre felicidad romántica a través de múltiples historias de amor.",
+            genre: "Drama de Felicidad Romántica",
+            mood: "Romántico • Múltiples Historias"
+        },
+
+        // ÉPICOS Y AVENTURAS
+        war_epic: {
+            title: "Saving Private Ryan",
+            description: "Épica bélica sobre guerra y conquista que te sumergirá en batallas históricas.",
+            genre: "Épica Bélica",
+            mood: "Épico • Histórico"
+        },
+        exploration_epic: {
+            title: "Lawrence of Arabia",
+            description: "Épica de exploración que sigue aventuras grandiosas a través de paisajes vastos.",
+            genre: "Épica de Exploración",
+            mood: "Aventura • Épico"
+        },
+        mythological_epic: {
+            title: "Troy",
+            description: "Épica mitológica que recrea mitos y leyendas clásicas con gran espectáculo.",
+            genre: "Épica Mitológica",
+            mood: "Mitológico • Épico"
+        },
+        historical_epic: {
+            title: "Gladiator",
+            description: "Épica histórica recreada con gran detalle visual y drama intenso.",
+            genre: "Épica Histórica",
+            mood: "Histórico • Dramático"
+        },
+        teen_adventure: {
+            title: "Spider-Man: Into the Spider-Verse",
+            description: "Aventuras juveniles con energía adolescente y visual innovador.",
+            genre: "Aventura Juvenil",
+            mood: "Juvenil • Animado"
+        },
+        travel_adventure: {
+            title: "The Secret Life of Walter Mitty",
+            description: "Aventura de viajes a lugares exóticos que inspira a vivir aventuras.",
+            genre: "Aventura de Viajes",
+            mood: "Aventura • Inspirador"
+        },
+        light_adventure: {
+            title: "The Princess Bride",
+            description: "Aventura ligera con humor, romance y acción familiar.",
+            genre: "Aventura Ligera",
+            mood: "Familiar • Humor"
+        },
+        nature_adventure: {
+            title: "Into the Wild",
+            description: "Aventura en bosques y montañas que explora la conexión con la naturaleza.",
+            genre: "Aventura de Naturaleza",
+            mood: "Aventura • Natural"
+        },
+        coastal_adventure: {
+            title: "Life of Pi",
+            description: "Aventura en playas y océanos con elementos espirituales y visuales impresionantes.",
+            genre: "Aventura Marítima",
+            mood: "Aventura • Espiritual"
+        },
+        mythological_adventure: {
+            title: "Wonder Woman",
+            description: "Aventura mitológica con héroes clásicos y elementos de la mitología griega.",
+            genre: "Aventura Mitológica",
+            mood: "Épico • Mitológico"
+        },
+        modern_action_adventure: {
+            title: "John Wick",
+            description: "Aventura de acción moderna con héroe clásico y noble en contextos contemporáneos.",
+            genre: "Aventura de Acción Moderna",
+            mood: "Acción • Moderno"
+        },
+        exploration_adventure: {
+            title: "Indiana Jones",
+            description: "Aventura de exploración clásica con héroes nobles y exploración de mundos perdidos.",
+            genre: "Aventura de Exploración Clásica",
+            mood: "Clásico • Exploración"
+        },
+        dark_antihero_drama: {
+            title: "Taxi Driver",
+            description: "Drama de antihéroe con pasado oscuro que explora la psique humana.",
+            genre: "Drama de Antihéroe Oscuro",
+            mood: "Oscuro • Psicológico"
+        },
+        cynical_antihero_comedy: {
+            title: "Deadpool",
+            description: "Comedia de antihéroe con humor cínico y rompimiento de la cuarta pared.",
+            genre: "Comedia de Antihéroe Cínico",
+            mood: "Cínico • Meta"
+        },
+        redemption_adventure: {
+            title: "Mad Max: Fury Road",
+            description: "Aventura de redención con antihéroe buscando redimirse en un mundo hostil.",
+            genre: "Aventura de Redención",
+            mood: "Redención • Post-Apocalíptico"
+        },
+        ensemble_adventure: {
+            title: "The Avengers",
+            description: "Aventura de grupo con aventureros diversos trabajando juntos.",
+            genre: "Aventura de Conjunto",
+            mood: "Épico • Equipo"
+        },
+        team_drama: {
+            title: "The Magnificent Seven",
+            description: "Drama de equipo que explora conflictos internos dentro de un grupo de héroes.",
+            genre: "Drama de Equipo",
+            mood: "Conflicto • Western"
+        },
+        mission_based_adventure: {
+            title: "Ocean's Eleven",
+            description: "Aventura basada en misiones imposibles con planificación y ejecución precisas.",
+            genre: "Aventura de Misión",
+            mood: "Inteligente • Heist"
+        },
+
+        // CIENCIA FICCIÓN Y FANTASÍA
+        futuristic_sci_fi: {
+            title: "Blade Runner 2049",
+            description: "Ciencia ficción futurista con mundos tecnológicos visualmente impresionantes.",
+            genre: "Ciencia Ficción Futurista",
+            mood: "Futurista • Visual"
+        },
+        high_fantasy: {
+            title: "The Lord of the Rings: Fellowship",
+            description: "Alta fantasía mágica con mundos visuales espectaculares y criaturas míticas.",
+            genre: "Alta Fantasía",
+            mood: "Mágico • Épico"
+        },
+        space_opera: {
+            title: "Star Wars",
+            description: "Ópera espacial épica con viajes intergalácticos y batallas cósmicas.",
+            genre: "Ópera Espacial",
+            mood: "Épico • Espacial"
+        },
+        tech_sci_fi: {
+            title: "Ex Machina",
+            description: "Ciencia ficción tecnológica que explora robótica e inteligencia artificial.",
+            genre: "Sci-Fi Tecnológico",
+            mood: "Cerebral • Tecnológico"
+        },
+        dystopian_sci_fi: {
+            title: "1984",
+            description: "Ciencia ficción distópica que examina futuros sombríos y control social.",
+            genre: "Sci-Fi Distópico",
+            mood: "Distópico • Político"
+        },
+        medieval_fantasy: {
+            title: "Game of Thrones",
+            description: "Fantasía medieval con dragones, magia y política en mundos de espada y brujería.",
+            genre: "Fantasía Medieval",
+            mood: "Épico • Medieval"
+        },
+        epic_fantasy: {
+            title: "The Lord of the Rings",
+            description: "Fantasía épica con criaturas míticas y aventuras en mundos mágicos.",
+            genre: "Fantasía Épica",
+            mood: "Épico • Aventura"
+        },
+        dark_fantasy: {
+            title: "Pan's Labyrinth",
+            description: "Fantasía oscura que combina elementos mágicos con realidades brutales.",
+            genre: "Fantasía Oscura",
+            mood: "Oscuro • Mágico"
+        },
+        survival_sci_fi: {
+            title: "The Martian",
+            description: "Ciencia ficción de supervivencia en entornos hostiles y postapocalípticos.",
+            genre: "Sci-Fi de Supervivencia",
+            mood: "Supervivencia • Ingenioso"
+        },
+        post_apocalyptic_drama: {
+            title: "The Road",
+            description: "Drama postapocalíptico sobre sociedades reconstruidas tras el colapso.",
+            genre: "Drama Post-Apocalíptico",
+            mood: "Sombrío • Humano"
+        },
+        wasteland_adventure: {
+            title: "Mad Max: Fury Road",
+            description: "Aventura en tierras desoladas con acción intensa en mundos postapocalípticos.",
+            genre: "Aventura de Tierras Baldías",
+            mood: "Acción • Desolado"
+        },
+        sci_fi_fantasy: {
+            title: "Guardians of the Galaxy",
+            description: "Fantasía de ciencia ficción que combina elementos futuristas y alienígenas.",
+            genre: "Fantasía Sci-Fi",
+            mood: "Divertido • Espacial"
+        },
+        mystical_drama: {
+            title: "Doctor Strange",
+            description: "Drama místico espiritual que explora dimensiones mágicas y espiritualidad.",
+            genre: "Drama Místico",
+            mood: "Místico • Mágico"
+        },
+        urban_fantasy: {
+            title: "Constantine",
+            description: "Fantasía urbana con magia en ciudades modernas y elementos sobrenaturales.",
+            genre: "Fantasía Urbana",
+            mood: "Urbano • Sobrenatural"
+        },
+        modern_mythical_fantasy: {
+            title: "Percy Jackson",
+            description: "Fantasía urbana con criaturas modernas basadas en mitología clásica.",
+            genre: "Fantasía Mitológica Moderna",
+            mood: "Juvenil • Mitológico"
+        },
+        hidden_magic_fantasy: {
+            title: "Harry Potter",
+            description: "Fantasía urbana con magia oculta en el mundo moderno.",
+            genre: "Fantasía de Magia Oculta",
+            mood: "Mágico • Aventura"
+        },
+        knight_fantasy: {
+            title: "Kingdom of Heaven",
+            description: "Fantasía medieval con caballeros y magos en aventuras épicas de honor y magia.",
+            genre: "Fantasía de Caballeros",
+            mood: "Medieval • Honor"
+        },
+        witch_fantasy: {
+            title: "The Witch",
+            description: "Fantasía medieval centrada en brujas y hechizos con atmósfera gótica.",
+            genre: "Fantasía de Brujas",
+            mood: "Gótico • Mágico"
+        },
+        greek_roman_mythology: {
+            title: "Troy",
+            description: "Épica mitológica basada en mitología griega y romana clásica.",
+            genre: "Mitología Greco-Romana",
+            mood: "Épico • Clásico"
+        },
+        norse_mythology: {
+            title: "Thor",
+            description: "Fantasía basada en mitología nórdica con dioses y criaturas del panteón nórdico.",
+            genre: "Mitología Nórdica",
+            mood: "Épico • Nórdico"
+        },
+        global_mythology: {
+            title: "Moana",
+            description: "Fantasía que explora mitología global con elementos de diversas culturas.",
+            genre: "Mitología Global",
+            mood: "Cultural • Aventura"
+        },
+        ai_sci_fi: {
+            title: "Ex Machina",
+            description: "Ciencia ficción sobre inteligencia artificial y robótica avanzada.",
+            genre: "Sci-Fi de IA",
+            mood: "Cerebral • Futurista"
+        },
+        space_exploration_sci_fi: {
+            title: "Interstellar",
+            description: "Ciencia ficción de exploración espacial con viajes a otros mundos.",
+            genre: "Sci-Fi de Exploración Espacial",
+            mood: "Épico • Cósmico"
+        },
+        utopian_dystopian_sci_fi: {
+            title: "Blade Runner",
+            description: "Ciencia ficción que examina utopías y distopías futuristas.",
+            genre: "Sci-Fi Utópico/Distópico",
+            mood: "Filosófico • Futurista"
+        },
+        alien_sci_fi: {
+            title: "Arrival",
+            description: "Ciencia ficción sobre contacto alienígena y comunicación interespecies.",
+            genre: "Sci-Fi Alienígena",
+            mood: "Cerebral • Comunicación"
+        },
+        colonization_sci_fi: {
+            title: "The Martian",
+            description: "Ciencia ficción sobre colonización planetaria y supervivencia en otros mundos.",
+            genre: "Sci-Fi de Colonización",
+            mood: "Supervivencia • Ingenioso"
+        },
+        robot_sci_fi: {
+            title: "Wall-E",
+            description: "Ciencia ficción sobre robótica avanzada con temas ambientales.",
+            genre: "Sci-Fi Robótico",
+            mood: "Familiar • Ambiental"
+        },
+        vr_sci_fi: {
+            title: "Ready Player One",
+            description: "Ciencia ficción sobre realidad virtual y mundos digitales inmersivos.",
+            genre: "Sci-Fi de Realidad Virtual",
+            mood: "Aventura • Digital"
+        },
+
+        // THRILLERS Y MISTERIOS
+        murder_mystery: {
+            title: "Knives Out",
+            description: "Misterio de asesinato clásico con giros inteligentes y personajes únicos.",
+            genre: "Misterio de Asesinato",
+            mood: "Inteligente • Misterioso"
+        },
+        supernatural_mystery: {
+            title: "The Sixth Sense",
+            description: "Misterio sobrenatural que combina elementos paranormales con suspense.",
+            genre: "Misterio Sobrenatural",
+            mood: "Sobrenatural • Suspense"
+        },
+        psychological_thriller: {
+            title: "Shutter Island",
+            description: "Thriller psicológico que explora la mente humana y la percepción de la realidad.",
+            genre: "Thriller Psicológico",
+            mood: "Psicológico • Inquietante"
+        },
+        supernatural_horror: {
+            title: "The Conjuring",
+            description: "Horror sobrenatural con miedo paranormal y elementos sobrenaturales.",
+            genre: "Horror Sobrenatural",
+            mood: "Sobrenatural • Aterrador"
+        },
+        psychological_horror: {
+            title: "Black Swan",
+            description: "Horror psicológico que explora paranoia y la desintegración mental.",
+            genre: "Horror Psicológico",
+            mood: "Psicológico • Perturbador"
+        },
+        suspense_horror: {
+            title: "A Quiet Place",
+            description: "Horror de suspenso intenso que mantiene la tensión constante.",
+            genre: "Horror de Suspenso",
+            mood: "Tenso • Intenso"
+        },
+        plot_twist_thriller: {
+            title: "The Usual Suspects",
+            description: "Thriller con giros inesperados que subvierten las expectativas del espectador.",
+            genre: "Thriller de Giros",
+            mood: "Sorprendente • Inteligente"
+        },
+        conspiracy_thriller: {
+            title: "All the President's Men",
+            description: "Thriller de conspiraciones que explora tramas de poder y corrupción.",
+            genre: "Thriller de Conspiración",
+            mood: "Político • Investigativo"
+        },
+        betrayal_thriller: {
+            title: "The Departed",
+            description: "Thriller de traición y engaño con múltiples capas de duplicidad.",
+            genre: "Thriller de Traición",
+            mood: "Complejo • Crimen"
+        },
+        historical_war_action: {
+            title: "Dunkirk",
+            description: "Acción militar con batallas históricas recreadas con gran realismo.",
+            genre: "Acción Bélica Histórica",
+            mood: "Histórico • Intenso"
+        },
+        police_action: {
+            title: "Heat",
+            description: "Acción policial con operaciones de alto riesgo y persecuciones urbanas.",
+            genre: "Acción Policial",
+            mood: "Urbano • Intenso"
+        },
+        tactical_thriller: {
+            title: "Zero Dark Thirty",
+            description: "Thriller táctico sobre misiones militares especializadas y operaciones encubiertas.",
+            genre: "Thriller Táctico",
+            mood: "Realista • Tenso"
+        },
+        mafia_thriller: {
+            title: "The Godfather",
+            description: "Thriller de crimen organizado que explora mafias y gánsteres.",
+            genre: "Thriller Mafioso",
+            mood: "Épico • Criminal"
+        },
+        chase_thriller: {
+            title: "Baby Driver",
+            description: "Thriller de persecuciones con secuencias de acción dinámicas.",
+            genre: "Thriller de Persecución",
+            mood: "Dinámico • Musical"
+        },
+        crime_mystery: {
+            title: "Seven",
+            description: "Misterio criminal que combina investigación policial con elementos psicológicos.",
+            genre: "Misterio Criminal",
+            mood: "Oscuro • Investigativo"
+        },
+
+        // SUPERHÉROES Y ACCIÓN
+        epic_superhero_movie: {
+            title: "Avengers: Endgame",
+            description: "Película de superhéroes épica con poderes extraordinarios y batallas cósmicas.",
+            genre: "Superhéroes Épicos",
+            mood: "Épico • Cósmico"
+        },
+        grounded_superhero_movie: {
+            title: "The Dark Knight",
+            description: "Película de superhéroes realista con héroes más humanos y creíbles.",
+            genre: "Superhéroes Realistas",
+            mood: "Realista • Oscuro"
+        },
+        team_superhero_movie: {
+            title: "Guardians of the Galaxy",
+            description: "Película de equipos de superhéroes con dinámicas de grupo y humor.",
+            genre: "Superhéroes en Equipo",
+            mood: "Divertido • Espacial"
+        },
+
+        // MUSICALES Y DRAMAS MUSICALES
+        epic_musical_drama: {
+            title: "Les Misérables",
+            description: "Drama musical épico con bandas sonoras grandiosas y emotivas.",
+            genre: "Drama Musical Épico",
+            mood: "Musical • Épico"
+        },
+        emotional_musical: {
+            title: "A Star Is Born",
+            description: "Musical emotivo con música suave que toca el corazón.",
+            genre: "Drama Musical Emotivo",
+            mood: "Emotivo • Musical"
+        },
+        folk_drama: {
+            title: "Inside Llewyn Davis",
+            description: "Drama con ritmos folk y música tradicional americana.",
+            genre: "Drama Folk",
+            mood: "Folk • Melancólico"
+        },
+
+        // DRAMAS FAMILIARES Y CORTOS
+        family_reunion_short: {
+            title: "Little Miss Sunshine",
+            description: "Corto familiar sobre reuniones felices y dinámicas familiares positivas.",
+            genre: "Corto Familiar de Reunión",
+            mood: "Familiar • Optimista"
+        },
+        traditional_family_short: {
+            title: "A Christmas Story",
+            description: "Corto familiar sobre tradiciones navideñas y valores familiares.",
+            genre: "Corto Familiar Tradicional",
+            mood: "Tradicional • Navideño"
+        },
+        supportive_family_short: {
+            title: "The Pursuit of Happyness",
+            description: "Corto familiar sobre apoyo mutuo en momentos de dificultad.",
+            genre: "Corto Familiar de Apoyo",
+            mood: "Inspirador • Familiar"
+        },
+        coming_of_age_short: {
+            title: "Boyhood",
+            description: "Corto sobre aventuras infantiles y el crecimiento personal.",
+            genre: "Corto Coming-of-Age",
+            mood: "Nostálgico • Crecimiento"
+        },
+        family_short: {
+            title: "Up",
+            description: "Corto sobre momentos familiares cálidos y recuerdos entrañables.",
+            genre: "Corto Familiar",
+            mood: "Emotivo • Familiar"
+        },
+        teen_friendship_short: {
+            title: "Eighth Grade",
+            description: "Corto sobre amistad juvenil durante la adolescencia.",
+            genre: "Corto de Amistad Juvenil",
+            mood: "Juvenil • Auténtico"
+        },
+
+        // DRAMAS ESPECÍFICOS Y TEMÁTICOS
+        second_chance_drama: {
+            title: "The Shawshank Redemption",
+            description: "Drama sobre segundas oportunidades y redención personal.",
+            genre: "Drama de Segunda Oportunidad",
+            mood: "Inspirador • Redención"
+        },
+        transformation_drama: {
+            title: "A Beautiful Mind",
+            description: "Drama sobre transformación personal y superación de adversidades.",
+            genre: "Drama de Transformación",
+            mood: "Inspirador • Psicológico"
+        },
+        redemption_drama: {
+            title: "Rocky",
+            description: "Drama sobre arrepentimiento y el camino hacia la redención.",
+            genre: "Drama de Redención",
+            mood: "Inspirador • Deportivo"
+        },
+        resilience_drama: {
+            title: "127 Hours",
+            description: "Drama sobre resiliencia humana en situaciones extremas.",
+            genre: "Drama de Resistencia",
+            mood: "Intenso • Supervivencia"
+        },
+        community_drama: {
+            title: "It's a Wonderful Life",
+            description: "Drama sobre comunidad unida y el impacto positivo en otros.",
+            genre: "Drama Comunitario",
+            mood: "Inspirador • Comunidad"
+        },
+        uplifting_drama: {
+            title: "The Blind Side",
+            description: "Drama edificante sobre triunfo personal y superación.",
+            genre: "Drama Edificante",
+            mood: "Inspirador • Deportivo"
+        },
+        family_resolution_drama: {
+            title: "Lion",
+            description: "Drama familiar sobre conflictos resueltos y reconciliación.",
+            genre: "Drama de Resolución Familiar",
+            mood: "Emotivo • Reconciliación"
+        },
+        family_love_drama: {
+            title: "Terms of Endearment",
+            description: "Drama sobre amor familiar incondicional y vínculos profundos.",
+            genre: "Drama de Amor Familiar",
+            mood: "Emotivo • Familiar"
+        },
+        family_legacy_drama: {
+            title: "The Godfather",
+            description: "Drama sobre legado familiar y tradiciones que pasan de generación en generación.",
+            genre: "Drama de Legado Familiar",
+            mood: "Épico • Generacional"
+        },
+        teen_friendship_drama: {
+            title: "The Breakfast Club",
+            description: "Drama sobre amistades juveniles y divertidas durante la adolescencia.",
+            genre: "Drama de Amistad Juvenil",
+            mood: "Juvenil • Nostálgico"
+        },
+        lifelong_friendship_drama: {
+            title: "Stand by Me",
+            description: "Drama sobre amistades duraderas y profundas que trascienden el tiempo.",
+            genre: "Drama de Amistad Duradera",
+            mood: "Nostálgico • Profundo"
+        },
+        hardship_friendship_drama: {
+            title: "The Green Mile",
+            description: "Drama sobre amistad en tiempos difíciles y circunstancias adversas.",
+            genre: "Drama de Amistad en Adversidad",
+            mood: "Emotivo • Dramático"
+        },
+        small_town_drama: {
+            title: "Our Town",
+            description: "Drama comunitario ambientado en pueblos pequeños con valores tradicionales.",
+            genre: "Drama de Pueblo Pequeño",
+            mood: "Nostálgico • Comunitario"
+        },
+        cultural_community_drama: {
+            title: "Crazy Rich Asians",
+            description: "Drama sobre unión cultural y identidad dentro de comunidades específicas.",
+            genre: "Drama Cultural Comunitario",
+            mood: "Cultural • Romántico"
+        },
+        collective_struggle_drama: {
+            title: "Norma Rae",
+            description: "Drama sobre lucha colectiva y movimientos sociales unidos.",
+            genre: "Drama de Lucha Colectiva",
+            mood: "Inspirador • Social"
+        },
+
+        // DRAMAS DEPORTIVOS Y PROFESIONALES
+        team_sports_drama: {
+            title: "Remember the Titans",
+            description: "Drama deportivo sobre equipos y trabajo en grupo en el contexto deportivo.",
+            genre: "Drama Deportivo de Equipo",
+            mood: "Inspirador • Deportivo"
+        },
+        individual_sports_drama: {
+            title: "The Wrestler",
+            description: "Drama sobre atletas individuales y sus luchas personales.",
+            genre: "Drama Deportivo Individual",
+            mood: "Intenso • Personal"
+        },
+        competitive_sports_drama: {
+            title: "Whiplash",
+            description: "Drama sobre competencia intensa y la búsqueda de la perfección.",
+            genre: "Drama de Competencia",
+            mood: "Intenso • Obsesivo"
+        },
+        personal_fear_drama: {
+            title: "Black Swan",
+            description: "Drama sobre superación de miedos personales y ansiedades internas.",
+            genre: "Drama de Miedos Personales",
+            mood: "Psicológico • Intenso"
+        },
+        relationship_repair_drama: {
+            title: "Blue Valentine",
+            description: "Drama sobre reparación de relaciones rotas y reconciliación.",
+            genre: "Drama de Reparación de Relaciones",
+            mood: "Emotivo • Realista"
+        },
+        entrepreneurial_drama: {
+            title: "The Social Network",
+            description: "Drama sobre emprendimiento y éxito en el mundo de los negocios.",
+            genre: "Drama Empresarial",
+            mood: "Moderno • Ambicioso"
+        },
+        ambition_drama: {
+            title: "There Will Be Blood",
+            description: "Drama sobre ambición y poder en la búsqueda del éxito profesional.",
+            genre: "Drama de Ambición",
+            mood: "Intenso • Oscuro"
+        },
+        academic_drama: {
+            title: "Good Will Hunting",
+            description: "Drama sobre superación académica y desarrollo intelectual.",
+            genre: "Drama Académico",
+            mood: "Inspirador • Intelectual"
+        },
+
+        // DRAMAS ÉTICOS Y FILOSÓFICOS
+        moral_dilemma_drama: {
+            title: "12 Angry Men",
+            description: "Drama sobre dilemas éticos y conflictos morales personales.",
+            genre: "Drama de Dilemas Morales",
+            mood: "Reflexivo • Ético"
+        },
+        science_ethics_drama: {
+            title: "Gattaca",
+            description: "Drama sobre ética en la ciencia y las implicaciones morales de la tecnología.",
+            genre: "Drama de Ética Científica",
+            mood: "Filosófico • Sci-Fi"
+        },
+        social_justice_drama: {
+            title: "To Kill a Mockingbird",
+            description: "Drama sobre justicia social y la lucha por la equidad.",
+            genre: "Drama de Justicia Social",
+            mood: "Inspirador • Social"
+        },
+        family_sacrifice_drama: {
+            title: "Life is Beautiful",
+            description: "Drama sobre sacrificio familiar en tiempos de adversidad extrema.",
+            genre: "Drama de Sacrificio Familiar",
+            mood: "Emotivo • Heroico"
+        },
+        heroic_sacrifice_drama: {
+            title: "Saving Private Ryan",
+            description: "Drama sobre sacrificio heroico por la humanidad en contextos bélicos.",
+            genre: "Drama de Sacrificio Heroico",
+            mood: "Épico • Heroico"
+        },
+        adventure_friendship_drama: {
+            title: "Lord of the Rings",
+            description: "Drama sobre lealtad entre amigos durante aventuras épicas.",
+            genre: "Drama de Amistad Aventurera",
+            mood: "Épico • Amistad"
+        },
+        crisis_friendship_drama: {
+            title: "Titanic",
+            description: "Drama sobre lealtad entre amigos durante crisis y emergencias.",
+            genre: "Drama de Amistad en Crisis",
+            mood: "Dramático • Heroico"
+        },
+        trust_friendship_drama: {
+            title: "The Shawshank Redemption",
+            description: "Drama sobre confianza mutua y lealtad inquebrantable entre amigos.",
+            genre: "Drama de Confianza",
+            mood: "Inspirador • Lealtad"
+        },
+        family_conflict_drama: {
+            title: "Little Women",
+            description: "Drama familiar sobre superación de conflictos internos familiares.",
+            genre: "Drama de Conflicto Familiar",
+            mood: "Emotivo • Familiar"
+        },
+        family_adventure_drama: {
+            title: "The Incredibles",
+            description: "Drama familiar durante aventuras que unen a la familia.",
+            genre: "Drama de Aventura Familiar",
+            mood: "Aventura • Familiar"
+        },
+        traditional_family_drama: {
+            title: "Fiddler on the Roof",
+            description: "Drama familiar con tradiciones culturales y valores generacionales.",
+            genre: "Drama Familiar Tradicional",
+            mood: "Cultural • Tradicional"
+        },
+
+        // DRAMAS CULTURALES
+        ancient_culture_drama: {
+            title: "The Prince of Egypt",
+            description: "Drama sobre tradiciones egipcias y mesopotámicas antiguas.",
+            genre: "Drama de Cultura Antigua",
+            mood: "Épico • Histórico"
+        },
+        nordic_celtic_drama: {
+            title: "The 13th Warrior",
+            description: "Drama sobre tradiciones nórdicas y celtas con elementos históricos.",
+            genre: "Drama Nórdico/Celta",
+            mood: "Épico • Tribal"
+        },
+        eastern_historical_drama: {
+            title: "The Last Samurai",
+            description: "Drama sobre tradiciones orientales y cultura asiática histórica.",
+            genre: "Drama Histórico Oriental",
+            mood: "Épico • Cultural"
+        },
+        subculture_drama: {
+            title: "8 Mile",
+            description: "Drama urbano sobre subculturas específicas y expresión artística.",
+            genre: "Drama Subcultural",
+            mood: "Urbano • Musical"
+        },
+        urban_crime_drama: {
+            title: "Boyz n the Hood",
+            description: "Drama urbano que examina crimen y vida en la ciudad.",
+            genre: "Drama Criminal Urbano",
+            mood: "Realista • Social"
+        },
+        japanese_cultural_drama: {
+            title: "Lost in Translation",
+            description: "Drama cultural que explora la cultura japonesa moderna.",
+            genre: "Drama Cultural Japonés",
+            mood: "Contemplativo • Cultural"
+        },
+        chinese_cultural_drama: {
+            title: "Crouching Tiger, Hidden Dragon",
+            description: "Drama que celebra la cultura china tradicional y artes marciales.",
+            genre: "Drama Cultural Chino",
+            mood: "Épico • Artístico"
+        },
+        indian_cultural_drama: {
+            title: "Slumdog Millionaire",
+            description: "Drama que explora la cultura india contemporánea y tradiciones.",
+            genre: "Drama Cultural Indio",
+            mood: "Vibrante • Cultural"
+        },
+        mexican_cultural_drama: {
+            title: "Coco",
+            description: "Drama que celebra la cultura mexicana y tradiciones del Día de los Muertos.",
+            genre: "Drama Cultural Mexicano",
+            mood: "Colorido • Familiar"
+        },
+        brazilian_cultural_drama: {
+            title: "City of God",
+            description: "Drama que examina la cultura brasileña urbana y realidades sociales.",
+            genre: "Drama Cultural Brasileño",
+            mood: "Intenso • Social"
+        },
+        argentine_cultural_drama: {
+            title: "The Secret in Their Eyes",
+            description: "Drama que explora la cultura argentina y su historia reciente.",
+            genre: "Drama Cultural Argentino",
+            mood: "Misterioso • Cultural"
+        },
+
+        // DRAMAS ESPECIALIZADOS
+        medieval_drama: {
+            title: "Braveheart",
+            description: "Drama histórico ambientado en la Edad Media con batallas épicas.",
+            genre: "Drama Medieval",
+            mood: "Épico • Histórico"
+        },
+        colonial_drama: {
+            title: "The Last of the Mohicans",
+            description: "Drama del siglo XIX durante períodos coloniales y expansión.",
+            genre: "Drama Colonial",
+            mood: "Épico • Aventura"
+        },
+        war_drama: {
+            title: "Apocalypse Now",
+            description: "Drama bélico del siglo XX que examina los horrores de la guerra.",
+            genre: "Drama Bélico",
+            mood: "Intenso • Psicológico"
+        },
+        early_20th_century_drama: {
+            title: "Titanic",
+            description: "Drama del siglo XX temprano con romance y tragedia histórica.",
+            genre: "Drama de Principios del Siglo XX",
+            mood: "Romántico • Trágico"
+        },
+        modern_history_drama: {
+            title: "Forrest Gump",
+            description: "Drama del siglo XX tardío que recorre eventos históricos modernos.",
+            genre: "Drama de Historia Moderna",
+            mood: "Épico • Nostálgico"
+        },
+        modern_war_drama: {
+            title: "Black Hawk Down",
+            description: "Drama sobre conflictos bélicos modernos y guerra contemporánea.",
+            genre: "Drama Bélico Moderno",
+            mood: "Intenso • Realista"
+        },
+        historical_war_drama: {
+            title: "Saving Private Ryan",
+            description: "Drama sobre batallas históricas con gran realismo y emotividad.",
+            genre: "Drama Bélico Histórico",
+            mood: "Épico • Heroico"
+        },
+
+        // DRAMAS EMOCIONALES Y PSICOLÓGICOS
+        personal_grief_drama: {
+            title: "Manchester by the Sea",
+            description: "Drama sobre duelo personal y procesamiento de pérdidas íntimas.",
+            genre: "Drama de Duelo Personal",
+            mood: "Profundo • Emotivo"
+        },
+        community_grief_drama: {
+            title: "The Sweet Hereafter",
+            description: "Drama sobre pérdida comunitaria y cómo las comunidades procesan tragedias.",
+            genre: "Drama de Duelo Comunitario",
+            mood: "Sombrío • Comunitario"
+        },
+        healing_drama: {
+            title: "Wild",
+            description: "Drama sobre sanación tras pérdida y recuperación emocional.",
+            genre: "Drama de Sanación",
+            mood: "Inspirador • Recuperación"
+        },
+        identity_drama: {
+            title: "Moonlight",
+            description: "Drama sobre conflicto interno relacionado con identidad personal.",
+            genre: "Drama de Identidad",
+            mood: "Íntimo • Profundo"
+        },
+        moral_conflict_drama: {
+            title: "A Few Good Men",
+            description: "Drama sobre dilemas morales internos y conflictos éticos.",
+            genre: "Drama de Conflicto Moral",
+            mood: "Tenso • Ético"
+        },
+        fear_drama: {
+            title: "The Babadook",
+            description: "Drama sobre miedos internos y enfrentamiento de fobias personales.",
+            genre: "Drama de Miedos",
+            mood: "Psicológico • Inquietante"
+        },
+
+        // DRAMAS EXISTENCIALES Y ESPIRITUALES
+        existential_drama: {
+            title: "The Tree of Life",
+            description: "Drama existencial sobre el sentido de la vida y propósito humano.",
+            genre: "Drama Existencial",
+            mood: "Filosófico • Artístico"
+        },
+        spiritual_drama: {
+            title: "Life of Pi",
+            description: "Drama espiritual sobre búsqueda espiritual y conexión divina.",
+            genre: "Drama Espiritual",
+            mood: "Espiritual • Aventura"
+        },
+        legacy_drama: {
+            title: "The Curious Case of Benjamin Button",
+            description: "Drama sobre legado personal y el impacto que dejamos en el mundo.",
+            genre: "Drama de Legado",
+            mood: "Reflexivo • Fantástico"
+        },
+        professional_legacy_drama: {
+            title: "Steve Jobs",
+            description: "Drama sobre legado profesional y impacto en la industria.",
+            genre: "Drama de Legado Profesional",
+            mood: "Biográfico • Ambicioso"
+        },
+        social_legacy_drama: {
+            title: "Gandhi",
+            description: "Drama sobre legado social y cambio positivo en la sociedad.",
+            genre: "Drama de Legado Social",
+            mood: "Inspirador • Histórico"
+        },
+        christian_drama: {
+            title: "The Passion of the Christ",
+            description: "Drama religioso cristiano que explora temas de fe y espiritualidad.",
+            genre: "Drama Cristiano",
+            mood: "Espiritual • Religioso"
+        },
+        islamic_drama: {
+            title: "The Message",
+            description: "Drama religioso islámico sobre fe y tradiciones musulmanas.",
+            genre: "Drama Islámico",
+            mood: "Espiritual • Cultural"
+        },
+        buddhist_drama: {
+            title: "Little Buddha",
+            description: "Drama religioso budista sobre meditación y filosofía oriental.",
+            genre: "Drama Budista",
+            mood: "Contemplativo • Espiritual"
+        },
+        forest_spiritual_drama: {
+            title: "Princess Mononoke",
+            description: "Drama espiritual sobre conexión con bosques y montañas.",
+            genre: "Drama Espiritual de Bosque",
+            mood: "Espiritual • Natural"
+        },
+        coastal_spiritual_drama: {
+            title: "The Beach",
+            description: "Drama espiritual ambientado en océanos y costas.",
+            genre: "Drama Espiritual Costero",
+            mood: "Contemplativo • Marítimo"
+        },
+        desert_spiritual_drama: {
+            title: "Lawrence of Arabia",
+            description: "Drama espiritual en desiertos y llanuras con elementos contemplativos.",
+            genre: "Drama Espiritual del Desierto",
+            mood: "Épico • Contemplativo"
+        },
+        meditative_drama: {
+            title: "Into Great Silence",
+            description: "Drama meditativo sobre búsqueda de paz interior a través de la contemplación.",
+            genre: "Drama Meditativo",
+            mood: "Contemplativo • Silencioso"
+        },
+        personal_reflection_drama: {
+            title: "Synecdoche, New York",
+            description: "Drama sobre reflexión personal profunda y autoexamen.",
+            genre: "Drama de Reflexión Personal",
+            mood: "Introspectivo • Complejo"
+        },
+        spiritual_connection_drama: {
+            title: "The Fountain",
+            description: "Drama sobre conexión espiritual que trasciende tiempo y espacio.",
+            genre: "Drama de Conexión Espiritual",
+            mood: "Místico • Trascendente"
+        }
+    };
+}
+    
+}
+    // Inicializar la aplicación cuando la página cargue
+    let app;
+    document.addEventListener('DOMContentLoaded', () => {
+        app = new MovieRecommendationSystem();
+    });
+
+    // Eventos de teclado para navegación
+    document.addEventListener('keydown', (event) => {
+        if (app && app.currentQuestion) {
+            const key = event.key.toLowerCase();
+            if (['a', 'b', 'c'].includes(key)) {
+                const option = app.currentQuestion.options.find(opt => opt.letter === key);
+                if (option) {
+                    app.selectOption(key);
+                }
+            }
+        }
+    });
+</script>
+</body>
+</html>
